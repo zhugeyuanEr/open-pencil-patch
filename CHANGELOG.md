@@ -14,6 +14,7 @@
 - Fix instance overrides shallow-copied on clone — override values containing objects are now deep-copied.
 - Fix stale variable bindings not cleaned up when fills/strokes arrays shrink — any indexed sub-path is now handled, not just `/color`.
 - Fix tooltips around inspector dropdowns/popovers without breaking floating menu anchoring.
+- Fix CJK canvas text rendering by bundling an offline Noto Sans SC fallback font for CanvasKit.
 - Harden MCP calls with bounded page-tree responses, oversized-result errors, JSON HTTP responses, and stale WebSocket cleanup.
 - Improve Figma boolean imports by preserving XOR operations as editable exclude nodes and falling back to imported fill geometry when boolean path reconstruction cannot produce a path.
 - Preserve rotated Figma transform origins for imported vector nodes.

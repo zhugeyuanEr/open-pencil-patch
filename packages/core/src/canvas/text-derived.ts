@@ -17,6 +17,8 @@ interface DecorationSpan extends DecorationRange {
   fills: Fill[]
 }
 
+const CJK_RE = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/u
+
 export function snapFigmaDerivedGlyphBaseline(y: number): number {
   return Math.round(y)
 }
@@ -25,6 +27,37 @@ export function shouldUseHardFigmaDerivedGlyphCoverage(
   node: Pick<SceneNode, 'fontSize' | 'fontWeight'>
 ): boolean {
   return node.fontSize === 20 && node.fontWeight === 400
+}
+
+function glyphBlobKey(blob: Uint8Array): string {
+  let hash = 2166136261
+  for (const byte of blob) {
+    hash ^= byte
+    hash = Math.imul(hash, 16777619)
+  }
+  return `${blob.byteLength}:${hash >>> 0}`
+}
+
+export function hasLikelyMissingFigmaDerivedCJKGlyphs(
+  node: Pick<SceneNode, 'text' | 'figmaDerivedTextGlyphs'>
+): boolean {
+  const glyphs = node.figmaDerivedTextGlyphs
+  if (!glyphs || glyphs.length < 2 || !CJK_RE.test(node.text)) return false
+
+  const chars = Array.from(node.text)
+  const seen = new Map<string, string>()
+  for (let index = 0; index < Math.min(chars.length, glyphs.length); index++) {
+    const char = chars[index]
+    const glyph = glyphs[index]
+    if (!char || !CJK_RE.test(char)) continue
+
+    const key = glyphBlobKey(glyph.commandsBlob)
+    const previous = seen.get(key)
+    if (previous && previous !== char) return true
+    seen.set(key, char)
+  }
+
+  return false
 }
 
 export function derivedUnderlineRect(node: Pick<SceneNode, 'width'>, baselineY: number) {
@@ -214,6 +247,7 @@ function drawDerivedDecorations(
 
 export function drawFigmaDerivedText(r: SkiaRenderer, canvas: Canvas, node: SceneNode): boolean {
   if (!node.figmaDerivedTextGlyphs?.length) return false
+  if (hasLikelyMissingFigmaDerivedCJKGlyphs(node)) return false
 
   let underlineBaselineY = 0
   for (const glyph of node.figmaDerivedTextGlyphs) {

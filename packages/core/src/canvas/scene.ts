@@ -4,6 +4,7 @@ import type { Canvas, Path } from 'canvaskit-wasm'
 import { DROP_HIGHLIGHT_ALPHA, DROP_HIGHLIGHT_STROKE, SECTION_CORNER_RADIUS } from '#core/constants'
 import { computeDescendantVisualBounds } from '#core/geometry'
 import type { SceneNode, SceneGraph, Fill } from '#core/scene-graph'
+import { fontManager } from '#core/text/fonts'
 import type { Color } from '#core/types'
 import { vectorNetworkToCenterlinePath } from '#core/vector'
 
@@ -636,6 +637,15 @@ function drawGradientText(
   }
 }
 
+const CJK_TEXT_RE = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/u
+
+function shouldDrawFigmaDerivedText(node: SceneNode): boolean {
+  if (CJK_TEXT_RE.test(node.text) && fontManager.getCJKFallbackFamilies().length > 0) {
+    return false
+  }
+  return true
+}
+
 export function renderText(r: SkiaRenderer, canvas: Canvas, node: SceneNode, fill?: Fill): void {
   const text = node.text
   if (!text) return
@@ -656,7 +666,7 @@ export function renderText(r: SkiaRenderer, canvas: Canvas, node: SceneNode, fil
       return
     }
   }
-  if (drawFigmaDerivedText(r, canvas, node)) {
+  if (shouldDrawFigmaDerivedText(node) && drawFigmaDerivedText(r, canvas, node)) {
     canvas.restore()
     return
   }

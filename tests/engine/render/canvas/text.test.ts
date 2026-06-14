@@ -27,7 +27,9 @@ function createMockCanvas() {
     save: mock(() => undefined),
     saveLayer: mock(() => undefined),
     restore: mock(() => undefined),
-    clipRect: mock(() => undefined)
+    clipRect: mock(() => undefined),
+    translate: mock(() => undefined),
+    scale: mock(() => undefined)
   }
 }
 
@@ -39,13 +41,31 @@ function createMockPicture() {
   return { delete: mock(() => undefined) }
 }
 
+function glyphCommandsBlob(points: Array<[number, number]>): Uint8Array {
+  const blob = new Uint8Array(points.length * 9 + 1)
+  const view = new DataView(blob.buffer)
+  let offset = 0
+  for (let index = 0; index < points.length; index++) {
+    const [x, y] = points[index]
+    blob[offset] = index === 0 ? 1 : 2
+    view.setFloat32(offset + 1, x, true)
+    view.setFloat32(offset + 5, y, true)
+    offset += 9
+  }
+  blob[offset] = 0
+  return blob
+}
+
 function createMockRenderer(overrides: Partial<Record<string, unknown>> = {}) {
   const paragraph = createMockParagraph()
   return {
     fontsLoaded: true,
     fontProvider: {},
     textFont: {},
-    fillPaint: { getColor: () => new Float32Array([0, 0, 0, 1]) },
+    fillPaint: {
+      getColor: () => new Float32Array([0, 0, 0, 1]),
+      setAntiAlias: mock(() => undefined)
+    },
     effectLayerPaint: {
       setBlendMode: mock(() => undefined),
       setColorFilter: mock(() => undefined),
@@ -178,6 +198,52 @@ describe('renderText', () => {
 
     expect(canvas.drawPicture).toHaveBeenCalledTimes(1)
     expect(r.buildParagraph).not.toHaveBeenCalled()
+  })
+
+  test('prefers CJK fallback paragraph over imported derived outlines once fallback is available', () => {
+    const cjkFallbackFamilies = fontManager.getCJKFallbackFamilies()
+    const originalFamilies = [...cjkFallbackFamilies]
+    cjkFallbackFamilies.splice(0, cjkFallbackFamilies.length, 'Noto Sans SC')
+
+    try {
+      const r = createMockRenderer()
+      const canvas = createMockCanvas()
+      const node = textNode({
+        text: '灵感',
+        fontFamily: '__MissingCJK__',
+        figmaDerivedTextGlyphs: [
+          {
+            commandsBlob: glyphCommandsBlob([
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 1]
+            ]),
+            x: 0,
+            y: 12,
+            fontSize: 12
+          },
+          {
+            commandsBlob: glyphCommandsBlob([
+              [0, 0],
+              [0.8, 0],
+              [0.4, 1]
+            ]),
+            x: 12,
+            y: 12,
+            fontSize: 12
+          }
+        ]
+      })
+
+      renderText(r, canvas as never, node)
+
+      expect(canvas.drawPath).not.toHaveBeenCalled()
+      expect(r.buildParagraph).toHaveBeenCalledTimes(1)
+      expect(canvas.drawParagraph).toHaveBeenCalledTimes(1)
+    } finally {
+      cjkFallbackFamilies.splice(0, cjkFallbackFamilies.length, ...originalFamilies)
+    }
   })
 
   test('falls back to drawText only when fonts are NOT loaded', () => {

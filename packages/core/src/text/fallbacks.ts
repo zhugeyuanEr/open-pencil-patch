@@ -10,6 +10,7 @@ export type FontFallbackScript = 'cjk' | 'arabic'
 export interface FontFallbackManifestEntry {
   script: FontFallbackScript
   localFamilies: string[]
+  bundledFamilies: string[]
   remoteFamilies: string[]
 }
 
@@ -38,11 +39,13 @@ export function fontFallbackManifest(
     cjk: {
       script: 'cjk',
       localFamilies: cjkLocalFallbackFamilies(userAgent),
+      bundledFamilies: ['Noto Sans SC'],
       remoteFamilies: [...CJK_GOOGLE_FONTS]
     },
     arabic: {
       script: 'arabic',
       localFamilies: [...ARABIC_LOCAL_FALLBACK_FAMILIES],
+      bundledFamilies: ['Noto Naskh Arabic'],
       remoteFamilies: [...ARABIC_REMOTE_FALLBACK_FAMILIES]
     }
   }

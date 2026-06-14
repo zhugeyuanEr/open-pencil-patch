@@ -99,6 +99,12 @@ body,
 body {
   font-family:
     Inter,
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    'Microsoft YaHei UI',
+    'Noto Sans SC',
+    'Noto Sans CJK SC',
     system-ui,
     -apple-system,
     sans-serif;

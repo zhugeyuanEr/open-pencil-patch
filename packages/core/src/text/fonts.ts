@@ -3,6 +3,7 @@ import { uniq } from 'es-toolkit/array'
 
 import { DEFAULT_FONT_FAMILY, IS_BROWSER, GOOGLE_FONTS_API_KEY } from '#core/constants'
 import type { SceneGraph } from '#core/scene-graph'
+import { bundledFontUrl } from '#core/text/bundled'
 import { fontFaceRenderFamily, parseFontStyle } from '#core/text/face'
 import { fontFallbackEntry } from '#core/text/fallbacks'
 import type { FontFallbackScript } from '#core/text/fallbacks'
@@ -61,15 +62,6 @@ export function chooseLocalFontMatch<T extends LocalFontMatch>(
   }
 
   return undefined
-}
-
-const BUNDLED_FONTS: Record<string, string> = {
-  'Inter|Regular': '/Inter-Regular.ttf',
-  'Inter|Medium': '/Inter-Medium.ttf',
-  'Inter|SemiBold': '/Inter-SemiBold.ttf',
-  'Inter|Bold': '/Inter-Bold.ttf',
-  'Inter|ExtraBold': '/Inter-ExtraBold.ttf',
-  'Noto Naskh Arabic|Regular': '/NotoNaskhArabic-Regular.ttf'
 }
 
 export const FONT_WEIGHT_NAMES: Record<number, string> = {
@@ -261,15 +253,8 @@ export class FontManager {
     const localBuffer = await this.findLocalFont(family, style)
     if (localBuffer) return this.registerAndCache(family, style, localBuffer)
 
-    const bundledUrl = BUNDLED_FONTS[cacheKey]
-    if (bundledUrl) {
-      try {
-        const buffer = await this.fetchBundledFont(bundledUrl)
-        if (buffer && !isVariableFont(buffer)) return this.registerAndCache(family, style, buffer)
-      } catch (e) {
-        console.warn(`Bundled font load failed for "${family}" ${style}:`, e)
-      }
-    }
+    const bundledBuffer = await this.loadBundledFont(family, style)
+    if (bundledBuffer) return bundledBuffer
 
     if (typeof fetch !== 'undefined') {
       try {
@@ -412,6 +397,18 @@ export class FontManager {
     }
 
     if (targetFamilies.length === 0) {
+      const bundledResults = await Promise.allSettled(
+        manifest.bundledFamilies.map(async (family) => {
+          const data = await this.loadBundledFont(family, 'Regular')
+          return data ? family : null
+        })
+      )
+      for (const result of bundledResults) {
+        if (result.status === 'fulfilled' && result.value) targetFamilies.push(result.value)
+      }
+    }
+
+    if (targetFamilies.length === 0) {
       const results = await Promise.allSettled(
         manifest.remoteFamilies.map(async (family) => {
           const data = await this.loadFont(family, 'Regular')
@@ -447,6 +444,19 @@ export class FontManager {
     } catch (e) {
       console.warn(`Downloaded font cache write failed for "${family}" ${style}:`, e)
     }
+  }
+
+  private async loadBundledFont(family: string, style: string): Promise<ArrayBuffer | null> {
+    const url = bundledFontUrl(family, style)
+    if (!url) return null
+
+    try {
+      const buffer = await this.fetchBundledFont(url)
+      if (buffer && !isVariableFont(buffer)) return this.registerAndCache(family, style, buffer)
+    } catch (e) {
+      console.warn(`Bundled font load failed for "${family}" ${style}:`, e)
+    }
+    return null
   }
 
   private async retryWithNormalizedFamily(family: string): Promise<Record<string, string> | null> {

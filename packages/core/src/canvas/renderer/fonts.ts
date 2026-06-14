@@ -7,12 +7,16 @@ import {
   SECTION_TITLE_FONT_SIZE,
   SIZE_FONT_SIZE
 } from '#core/constants'
-import type { SceneGraph } from '#core/scene-graph'
+import type { SceneGraph, SceneNode } from '#core/scene-graph'
+import type { FontFallbackScript } from '#core/text/fallbacks'
 import { fontManager } from '#core/text/fonts'
 
 export function getFontProvider(r: SkiaRenderer) {
   return r.isDestroyed() || !r.fontProvider ? null : r.fontProvider
 }
+
+const CJK_RE = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/u
+const ARABIC_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/u
 
 export async function loadFonts(
   r: SkiaRenderer,
@@ -48,14 +52,8 @@ export async function loadFonts(
   r.fontsLoaded = true
   r.invalidateAllPictures()
 
-  void fontManager.ensureCJKFallback().then((families) => {
-    if (!r.isDestroyed() && families.length > 0) {
-      r.invalidateAllPictures()
-      onFallbackFontsLoaded?.()
-    }
-  })
-  void fontManager.ensureArabicFallback().then((families) => {
-    if (!r.isDestroyed() && families.length > 0) {
+  void fontManager.ensureFallbackPack().then((families) => {
+    if (!r.isDestroyed() && (families.cjk.length > 0 || families.arabic.length > 0)) {
       r.invalidateAllPictures()
       onFallbackFontsLoaded?.()
     }
@@ -75,8 +73,31 @@ export async function prepareForExport(
 
   const fontKeys = fontManager.collectFontKeys(graph, nodeIds)
   await Promise.all(fontKeys.map(([family, style]) => fontManager.loadFont(family, style)))
+  const fallbackScripts = collectFallbackScripts(graph, nodeIds)
+  if (fallbackScripts.length > 0) await fontManager.ensureFallbackPack(fallbackScripts)
 
   computeAllLayouts(graph, pageId)
 
   return () => setTextMeasurer(previousTextMeasurer)
+}
+
+function collectFallbackScripts(graph: SceneGraph, nodeIds: string[]): FontFallbackScript[] {
+  const scripts = new Set<FontFallbackScript>()
+  const visit = (node: SceneNode) => {
+    if (node.type === 'TEXT') {
+      if (CJK_RE.test(node.text)) scripts.add('cjk')
+      if (ARABIC_RE.test(node.text)) scripts.add('arabic')
+    }
+    for (const childId of node.childIds) {
+      const child = graph.getNode(childId)
+      if (child) visit(child)
+    }
+  }
+
+  for (const id of nodeIds) {
+    const node = graph.getNode(id)
+    if (node) visit(node)
+  }
+
+  return [...scripts]
 }

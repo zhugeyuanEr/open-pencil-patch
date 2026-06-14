@@ -5,6 +5,7 @@ import { renderNodesToImage, SceneGraph, SkiaRenderer } from '@open-pencil/core'
 import { initCanvasKit } from '#cli/headless'
 import {
   derivedUnderlineRect,
+  hasLikelyMissingFigmaDerivedCJKGlyphs,
   shouldUseHardFigmaDerivedGlyphCoverage,
   snapFigmaDerivedGlyphBaseline
 } from '#core/canvas/text-derived'
@@ -38,6 +39,41 @@ function squareCommandsBlob(): Uint8Array {
 }
 
 describe('derived text rendering', () => {
+  test('detects repeated missing-glyph outlines for distinct CJK characters', () => {
+    const missingGlyph = squareCommandsBlob()
+    expect(
+      hasLikelyMissingFigmaDerivedCJKGlyphs({
+        text: '邮箱',
+        figmaDerivedTextGlyphs: [
+          { commandsBlob: missingGlyph, x: 0, y: 12, fontSize: 12 },
+          { commandsBlob: missingGlyph, x: 12, y: 12, fontSize: 12 }
+        ]
+      })
+    ).toBeTrue()
+  })
+
+  test('keeps derived outlines for repeated same CJK character and non-CJK text', () => {
+    const glyph = squareCommandsBlob()
+    expect(
+      hasLikelyMissingFigmaDerivedCJKGlyphs({
+        text: '人人',
+        figmaDerivedTextGlyphs: [
+          { commandsBlob: glyph, x: 0, y: 12, fontSize: 12 },
+          { commandsBlob: glyph, x: 12, y: 12, fontSize: 12 }
+        ]
+      })
+    ).toBeFalse()
+    expect(
+      hasLikelyMissingFigmaDerivedCJKGlyphs({
+        text: '••••',
+        figmaDerivedTextGlyphs: [
+          { commandsBlob: glyph, x: 0, y: 12, fontSize: 12 },
+          { commandsBlob: glyph, x: 12, y: 12, fontSize: 12 }
+        ]
+      })
+    ).toBeFalse()
+  })
+
   test('snaps Figma glyph baselines to device pixels', () => {
     expect(snapFigmaDerivedGlyphBaseline(47.45454406738281)).toBe(47)
     expect(snapFigmaDerivedGlyphBaseline(15.090909004211426)).toBe(15)

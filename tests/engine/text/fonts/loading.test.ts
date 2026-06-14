@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
 
-import type { CanvasKit, TypefaceFontProvider } from 'canvaskit-wasm'
+import type { CanvasKit } from 'canvaskit-wasm'
 
 import {
   chooseLocalFontMatch,
@@ -19,6 +19,8 @@ import {
 } from '@open-pencil/core'
 
 import { expectDefined } from '#tests/helpers/assert'
+
+import { createRecordingProvider } from './helpers'
 
 function pageId(graph: SceneGraph) {
   return graph.getPages()[0].id
@@ -81,16 +83,6 @@ describe('weightToFigmaStyle', () => {
     expect(weightToFigmaStyle(600, true)).toBe('Semi Bold Italic')
   })
 })
-
-function createRecordingProvider() {
-  const registrations: Array<{ family: string; byteLength: number }> = []
-  const provider = {
-    registerFont(data: ArrayBuffer, family: string) {
-      registrations.push({ family, byteLength: data.byteLength })
-    }
-  } as TypefaceFontProvider
-  return { provider, registrations }
-}
 
 describe('chooseLocalFontMatch', () => {
   const fonts = [
@@ -551,6 +543,8 @@ describe('font fallback manifest', () => {
 
   test('defines remote fallback families for CJK and Arabic', () => {
     const manifest = fontFallbackManifest('X11; Linux x86_64')
+    expect(manifest.cjk.bundledFamilies).toContain('Noto Sans SC')
+    expect(manifest.arabic.bundledFamilies).toContain('Noto Naskh Arabic')
     expect(manifest.cjk.remoteFamilies).toContain('Noto Sans SC')
     expect(manifest.arabic.remoteFamilies).toContain('Noto Naskh Arabic')
   })

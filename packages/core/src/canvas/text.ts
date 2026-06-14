@@ -51,9 +51,22 @@ function hasRequiredFallbackFonts(text: string): boolean {
   return true
 }
 
+function hasLoadedFontOrScriptFallback(family: string, style: string, text: string): boolean {
+  if (fontManager.isStyleLoaded(family, style)) return true
+  if (CJK_RE.test(text) && fontManager.getCJKFallbackFamilies().length > 0) return true
+  if (ARABIC_RE.test(text) && fontManager.getArabicFallbackFamilies().length > 0) return true
+  return false
+}
+
 export function isNodeFontLoaded(_r: TextRenderer, node: SceneNode): boolean {
   const baseFamily = node.fontFamily || DEFAULT_FONT_FAMILY
-  if (!fontManager.isStyleLoaded(baseFamily, weightToStyle(node.fontWeight, node.italic))) {
+  if (
+    !hasLoadedFontOrScriptFallback(
+      baseFamily,
+      weightToStyle(node.fontWeight, node.italic),
+      node.text
+    )
+  ) {
     return false
   }
 
@@ -61,7 +74,8 @@ export function isNodeFontLoaded(_r: TextRenderer, node: SceneNode): boolean {
     const family = run.style.fontFamily ?? baseFamily
     const weight = run.style.fontWeight ?? node.fontWeight
     const italic = run.style.italic ?? node.italic
-    if (!fontManager.isStyleLoaded(family, weightToStyle(weight, italic))) return false
+    const runText = node.text.slice(run.start, run.start + run.length)
+    if (!hasLoadedFontOrScriptFallback(family, weightToStyle(weight, italic), runText)) return false
   }
 
   return hasRequiredFallbackFonts(node.text)
