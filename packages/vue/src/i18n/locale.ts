@@ -1,7 +1,8 @@
-import { browser, localeFrom } from '@nanostores/i18n'
+import { localeFrom } from '@nanostores/i18n'
 import { atom } from 'nanostores'
 
 export const AVAILABLE_LOCALES = ['en', 'de', 'es', 'fr', 'it', 'pl', 'ru', 'zh-CN'] as const
+export const DEFAULT_LOCALE: Locale = 'zh-CN'
 export type Locale = (typeof AVAILABLE_LOCALES)[number]
 
 export const LOCALE_LABELS: Record<Locale, string> = {
@@ -18,8 +19,9 @@ export const LOCALE_LABELS: Record<Locale, string> = {
 const LOCALE_STORAGE_KEY = 'open-pencil-locale'
 
 export const localeSetting = atom<Locale | undefined>(undefined)
+const defaultLocaleStore = atom<Locale>(DEFAULT_LOCALE)
 
-export const locale = localeFrom(localeSetting, browser({ available: AVAILABLE_LOCALES }))
+export const locale = localeFrom(localeSetting, defaultLocaleStore)
 
 function getLocalStorage(): Storage | null {
   if (typeof localStorage === 'undefined') return null
