@@ -1,15 +1,15 @@
 [
   {
-    "label": "File",
+    "label": "文件",
     "items": [
       {
         "id": "new",
-        "label": "New",
+        "label": "新建",
         "accelerator": "CmdOrCtrl+N"
       },
       {
         "id": "open",
-        "label": "Open…",
+        "label": "打开…",
         "accelerator": "CmdOrCtrl+O"
       },
       {
@@ -17,12 +17,12 @@
       },
       {
         "id": "save",
-        "label": "Save",
+        "label": "保存",
         "accelerator": "CmdOrCtrl+S"
       },
       {
         "id": "save-as",
-        "label": "Save As…",
+        "label": "另存为…",
         "accelerator": "CmdOrCtrl+Shift+S"
       },
       {
@@ -30,7 +30,7 @@
       },
       {
         "id": "export-selection",
-        "label": "Export Selection",
+        "label": "导出所选内容",
         "accelerator": "CmdOrCtrl+Shift+E",
         "sub": [
           {
@@ -52,89 +52,89 @@
       },
       {
         "id": "autosave",
-        "label": "Autosave",
+        "label": "自动保存到本地文件",
         "checkbox": true
       },
       {
         "id": "close",
-        "label": "Close Tab",
+        "label": "关闭标签页",
         "accelerator": "CmdOrCtrl+W"
       }
     ]
   },
   {
-    "label": "Edit",
+    "label": "编辑",
     "items": [
       {
         "id": "edit.undo",
-        "label": "Undo"
+        "label": "撤销"
       },
       {
         "id": "edit.redo",
-        "label": "Redo"
+        "label": "重做"
       },
       {
         "type": "separator"
       },
       {
         "id": "copy",
-        "label": "Copy",
+        "label": "复制",
         "accelerator": "CmdOrCtrl+C"
       },
       {
         "id": "cut",
-        "label": "Cut",
+        "label": "剪切",
         "accelerator": "CmdOrCtrl+X"
       },
       {
         "id": "paste",
-        "label": "Paste",
+        "label": "粘贴",
         "accelerator": "CmdOrCtrl+V"
       },
       {
         "id": "paste-to-replace",
-        "label": "Paste to replace"
+        "label": "粘贴并替换"
       },
       {
         "id": "selection.duplicate",
-        "label": "Duplicate"
+        "label": "复制"
       },
       {
         "id": "selection.delete",
-        "label": "Delete"
+        "label": "删除"
       },
       {
         "type": "separator"
       },
       {
         "id": "selection.selectAll",
-        "label": "Select All"
+        "label": "全选"
       }
     ]
   },
   {
-    "label": "View",
+    "label": "视图",
     "items": [
       {
         "id": "view.zoom100",
-        "label": "Zoom to 100%"
+        "label": "缩放到 100%"
       },
       {
         "id": "view.zoomFit",
-        "label": "Zoom to Fit"
+        "label": "适应屏幕"
       },
       {
         "id": "view.zoomSelection",
-        "label": "Zoom to Selection"
+        "label": "适应所选内容"
       },
       {
         "id": "zoom-in",
-        "label": "Zoom In",
+        "label": "放大",
         "accelerator": "CmdOrCtrl+="
       },
       {
         "id": "zoom-out",
-        "label": "Zoom Out",
+        "label": "缩小",
         "accelerator": "CmdOrCtrl+-"
       },
       {
@@ -142,21 +142,21 @@
       },
       {
         "id": "theme",
-        "label": "Theme",
+        "label": "主题",
         "sub": [
           {
             "id": "theme-light",
-            "label": "Light",
+            "label": "浅色",
             "checkbox": true
           },
           {
             "id": "theme-dark",
-            "label": "Dark",
+            "label": "深色",
             "checkbox": true
           },
           {
             "id": "theme-auto",
-            "label": "Auto",
+            "label": "自动",
             "checkbox": true
           }
         ]
@@ -166,133 +166,133 @@
       },
       {
         "id": "toggle-ui",
-        "label": "Toggle UI",
+        "label": "切换界面",
         "accelerator": "CmdOrCtrl+\\"
       },
       {
         "id": "dev-tools",
-        "label": "Developer Tools",
+        "label": "开发者工具",
         "accelerator": "CmdOrCtrl+Alt+I"
       }
     ]
   },
   {
-    "label": "Object",
+    "label": "对象",
     "items": [
       {
         "id": "selection.group",
-        "label": "Group Selection"
+        "label": "编组所选内容"
       },
       {
         "id": "selection.frameSelection",
-        "label": "Frame Selection"
+        "label": "为所选内容添加画框"
       },
       {
         "id": "selection.ungroup",
-        "label": "Ungroup Selection"
+        "label": "取消编组"
       },
       {
         "type": "separator"
       },
       {
         "id": "selection.booleanUnion",
-        "label": "Union selection"
+        "label": "合并所选内容"
       },
       {
         "id": "selection.booleanSubtract",
-        "label": "Subtract selection"
+        "label": "减去所选内容"
       },
       {
         "id": "selection.booleanIntersect",
-        "label": "Intersect selection"
+        "label": "相交所选内容"
       },
       {
         "id": "selection.booleanExclude",
-        "label": "Exclude selection"
+        "label": "排除所选内容"
       },
       {
         "id": "selection.flatten",
-        "label": "Flatten"
+        "label": "扁平化"
       },
       {
         "id": "selection.outlineText",
-        "label": "Outline text"
+        "label": "文本转轮廓"
       },
       {
         "id": "selection.outlineStroke",
-        "label": "Outline stroke"
+        "label": "描边转轮廓"
       },
       {
         "type": "separator"
       },
       {
         "id": "selection.createComponent",
-        "label": "Create Component"
+        "label": "创建组件"
       },
       {
         "id": "selection.createComponentSet",
-        "label": "Create Component Set"
+        "label": "创建组件集"
       },
       {
         "id": "selection.detachInstance",
-        "label": "Detach Instance"
+        "label": "分离实例"
       },
       {
         "type": "separator"
       },
       {
         "id": "selection.bringToFront",
-        "label": "Bring to Front"
+        "label": "置于顶层"
       },
       {
         "id": "selection.sendToBack",
-        "label": "Send to Back"
+        "label": "置于底层"
       }
     ]
   },
   {
-    "label": "Text",
+    "label": "文本",
     "items": [
       {
         "id": "text.bold",
-        "label": "Bold",
+        "label": "加粗",
         "accelerator": "CmdOrCtrl+B"
       },
       {
         "id": "text.italic",
-        "label": "Italic",
+        "label": "斜体",
         "accelerator": "CmdOrCtrl+I"
       },
       {
         "id": "text.underline",
-        "label": "Underline",
+        "label": "下划线",
         "accelerator": "CmdOrCtrl+U"
       }
     ]
   },
   {
-    "label": "Arrange",
+    "label": "排列",
     "items": [
       {
         "id": "selection.wrapInAutoLayout",
-        "label": "Wrap in Auto Layout"
+        "label": "添加自动布局"
       },
       {
         "type": "separator"
       },
       {
         "id": "align-left",
-        "label": "Align Left",
+        "label": "左对齐",
         "accelerator": "Alt+A"
       },
       {
         "id": "align-center",
-        "label": "Align Center",
+        "label": "水平居中",
         "accelerator": "Alt+H"
       },
       {
         "id": "align-right",
-        "label": "Align Right",
+        "label": "右对齐",
         "accelerator": "Alt+D"
       },
       {
@@ -300,17 +300,17 @@
       },
       {
         "id": "align-top",
-        "label": "Align Top",
+        "label": "顶部对齐",
         "accelerator": "Alt+W"
       },
       {
         "id": "align-middle",
-        "label": "Align Middle",
+        "label": "垂直居中",
         "accelerator": "Alt+V"
       },
       {
         "id": "align-bottom",
-        "label": "Align Bottom",
+        "label": "底部对齐",
         "accelerator": "Alt+S"
       }
     ]
