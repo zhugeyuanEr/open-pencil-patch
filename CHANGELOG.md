@@ -24,17 +24,17 @@
 - Allow chat e2e tests to find the AI tab by both English ("AI") and
   Chinese ("AI") labels, and grant clipboard permissions for the
   copy-as-text / copy-as-Markdown exports.
-- Fix tofu glyphs in cold-start Tauri 2 desktop builds. The bundled
-  CJK/Arabic fallback fonts were loaded asynchronously AFTER the first
-  render, so any text node using those scripts rendered as missing-glyph
-  boxes until the fallback pack resolved and triggered a re-render. Wait
-  for `fontManager.ensureFallbackPack()` before declaring fonts loaded
-  in `loadFonts`, retry `fetchBundledFont` up to three times with
+- Fix tofu glyphs in cold-start Tauri 2 desktop builds. Wait for
+  `fontManager.ensureFallbackPack()` before declaring fonts loaded in
+  `loadFonts`, and retry `fetchBundledFont` up to three times with
   exponential backoff so a cold-start Tauri protocol race doesn't lose
-  the first font fetch, switch the URL through `convertFileSrc` (Tauri
-  2's official asset URL helper), add `<link rel="preload">` hints, and
-  re-enable `assetProtocol` plus `bundle.resources` for the seven
-  bundled `.ttf` files as belt-and-braces.
+  the first font fetch.
+- Roll back the experimental `assetProtocol` scope / `bundle.resources`
+  font work and the `convertFileSrc` URL rewrite. Combined with
+  `tauri-plugin-updater` the `**` asset scope may have been redirecting
+  WebView2's fetch stack; the above retry alone is sufficient to clear
+  the tofu on cold start without it, and the rollback restores outbound
+  HTTPS to the AI provider.
 
 ## 0.13.2 — 2026-05-30
 
