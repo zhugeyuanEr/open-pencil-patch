@@ -65,11 +65,11 @@ export function createLanguageModel(config: ModelConfig): LanguageModel {
       return zai(effectiveModelID)
     }
     case 'minimax': {
-      const minimax = createOpenAI({
+      const minimaxi = createOpenAI({
         apiKey: config.apiKey,
-        baseURL: 'https://api.minimax.io/v1'
+        baseURL: 'https://api.minimaxi.com/v1'
       })
-      return minimax.chat(effectiveModelID)
+      return minimaxi.chat(effectiveModelID)
     }
     case 'openai-compatible': {
       const custom = createOpenAI({

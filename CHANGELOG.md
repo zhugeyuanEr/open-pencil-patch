@@ -35,6 +35,9 @@
   WebView2's fetch stack; the above retry alone is sufficient to clear
   the tofu on cold start without it, and the rollback restores outbound
   HTTPS to the AI provider.
+- Fix the built-in `minimax` (MiniMax) provider pointing at
+  `https://api.minimax.io/v1`, which 404s. Use the real endpoint
+  `https://api.minimaxi.com/v1` so the preset works out of the box.
 
 ## 0.13.2 — 2026-05-30
 
