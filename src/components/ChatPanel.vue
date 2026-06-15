@@ -14,6 +14,7 @@ import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatSessionMenu from '@/components/chat/ChatSessionMenu.vue'
 import AppTextButton from '@/components/ui/AppTextButton.vue'
 import ProviderSetup from '@/components/chat/ProviderSetup.vue'
+import { useEditorStore } from '@/app/editor/active-store'
 import { useAIChat } from '@/app/ai/chat/use'
 import { toast } from '@/app/shell/ui'
 import { useI18n } from '@open-pencil/vue'
@@ -85,6 +86,21 @@ watch(
 // for the new doc (transports.ts swaps the sessions store automatically).
 watch(
   () => activeTab.value?.id,
+  async () => {
+    const nextChat = await ensureChat()
+    chat.value = nextChat ? markRaw(nextChat) : null
+  }
+)
+
+// Also re-ensure when the active document's file path or name changes
+// (e.g., on first open of a file in the current tab, the tab id is the
+// same but the editor's filePath / documentName flips to the real values
+// — without this the chat sessions are loaded under the wrong docKey).
+watch(
+  () => {
+    const store = useEditorStore()
+    return `${store.getFilePath() ?? ''}::${store.state.documentName ?? ''}`
+  },
   async () => {
     const nextChat = await ensureChat()
     chat.value = nextChat ? markRaw(nextChat) : null

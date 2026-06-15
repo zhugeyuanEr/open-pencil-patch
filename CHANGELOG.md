@@ -38,6 +38,14 @@
 - Fix the built-in `minimax` (MiniMax) provider pointing at
   `https://api.minimax.io/v1`, which 404s. Use the real endpoint
   `https://api.minimaxi.com/v1` so the preset works out of the box.
+- Reload AI chat sessions on first open of a file. The tab id doesn't
+  change when a file is opened in the active tab, so the previous
+  `watch(activeTab.id)` never fired and `ensureChat` ran with whatever
+  `filePath` happened to be at app launch (often `dn:Untitled` or
+  `tab:tab-1`), so messages were saved under the wrong key and only
+  loaded after a tab switch forced a re-key. Add a second watch on
+  the active editor's `filePath + documentName` so the sessions store
+  re-resolves the docKey as soon as the source becomes available.
 
 ## 0.13.2 — 2026-05-30
 
