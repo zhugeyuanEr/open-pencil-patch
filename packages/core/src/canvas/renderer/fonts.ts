@@ -29,6 +29,7 @@ export async function loadFonts(
   fontManager.attachProvider(r.ck, r.fontProvider)
 
   const fontData = await fontManager.loadFont(DEFAULT_FONT_FAMILY, 'Regular')
+  const fallbackFamilies = await fontManager.ensureFallbackPack()
   if (r.isDestroyed()) return
   if (fontData) {
     r.fontProvider.registerFont(fontData, DEFAULT_FONT_FAMILY)
@@ -52,12 +53,9 @@ export async function loadFonts(
   r.fontsLoaded = true
   r.invalidateAllPictures()
 
-  void fontManager.ensureFallbackPack().then((families) => {
-    if (!r.isDestroyed() && (families.cjk.length > 0 || families.arabic.length > 0)) {
-      r.invalidateAllPictures()
-      onFallbackFontsLoaded?.()
-    }
-  })
+  if (fallbackFamilies.cjk.length > 0 || fallbackFamilies.arabic.length > 0) {
+    onFallbackFontsLoaded?.()
+  }
 }
 
 export async function prepareForExport(
