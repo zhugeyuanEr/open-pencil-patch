@@ -24,6 +24,14 @@
 - Allow chat e2e tests to find the AI tab by both English ("AI") and
   Chinese ("AI") labels, and grant clipboard permissions for the
   copy-as-text / copy-as-Markdown exports.
+- Fix tofu glyphs in cold-start Tauri 2 desktop builds. `frontendDist` font
+  fetches via the embedded `tauri://` protocol raced the custom-protocol
+  handler and timed out on first launch, leaving CanvasKit without any
+  bundled font. Switch `fetchBundledFont` to resolve through
+  `convertFileSrc` (Tauri 2's official asset URL helper), add
+  `<link rel="preload">` hints for each bundled `.ttf`, and re-enable
+  `assetProtocol` + list the fonts in `bundle.resources` so they sit
+  alongside the binary after install.
 
 ## 0.13.2 — 2026-05-30
 

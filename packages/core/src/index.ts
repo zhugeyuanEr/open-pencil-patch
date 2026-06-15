@@ -251,6 +251,7 @@ export {
 export { computeSelectionBounds, computeSnap, type SnapGuide } from './scene-graph/snap'
 export { UndoManager, type UndoEntry, type UndoManagerOptions } from './scene-graph/undo'
 export { TextEditor, type TextCaret, type TextEditorState } from './text/editor'
+export { bundledFontUrl, bundledFontUrls, resolveBundledFontUrl } from './text/bundled'
 export {
   getStyleAt,
   applyStyleToRange,

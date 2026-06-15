@@ -1,3 +1,5 @@
+import { IS_TAURI } from '#core/constants'
+
 const BUNDLED_FONTS: Record<string, string> = {
   'Inter|Regular': '/Inter-Regular.ttf',
   'Inter|Medium': '/Inter-Medium.ttf',
@@ -18,3 +20,18 @@ export function bundledFontUrl(family: string, style: string): string | undefine
   }
   return undefined
 }
+
+export const bundledFontUrls: readonly string[] = Object.values(BUNDLED_FONTS)
+
+export async function resolveBundledFontUrl(path: string): Promise<string> {
+  if (!IS_TAURI) return path
+  try {
+    const mod = (await import(/* @vite-ignore */ '@tauri-apps/api/core' as string)) as {
+      convertFileSrc?: (path: string) => string
+    }
+    return mod.convertFileSrc ? mod.convertFileSrc(path) : path
+  } catch {
+    return path
+  }
+}
+

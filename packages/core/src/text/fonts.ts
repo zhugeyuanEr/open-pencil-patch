@@ -3,7 +3,7 @@ import { uniq } from 'es-toolkit/array'
 
 import { DEFAULT_FONT_FAMILY, IS_BROWSER, GOOGLE_FONTS_API_KEY } from '#core/constants'
 import type { SceneGraph } from '#core/scene-graph'
-import { bundledFontUrl } from '#core/text/bundled'
+import { bundledFontUrl, resolveBundledFontUrl } from '#core/text/bundled'
 import { fontFaceRenderFamily, parseFontStyle } from '#core/text/face'
 import { fontFallbackEntry } from '#core/text/fallbacks'
 import type { FontFallbackScript } from '#core/text/fallbacks'
@@ -225,7 +225,8 @@ export class FontManager {
 
   async fetchBundledFont(url: string): Promise<ArrayBuffer | null> {
     if (IS_BROWSER) {
-      const response = await fetch(url)
+      const assetUrl = await resolveBundledFontUrl(url)
+      const response = await fetch(assetUrl)
       return response.arrayBuffer()
     }
     const { readFile } = await import(/* @vite-ignore */ 'node:fs/promises')

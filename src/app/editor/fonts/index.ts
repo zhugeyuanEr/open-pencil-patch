@@ -2,6 +2,7 @@ import { useLocalStorage } from '@vueuse/core'
 
 import type { SceneGraph } from '@open-pencil/core/scene-graph'
 import {
+  bundledFontUrls,
   fontManager,
   styleToWeight,
   type FontFamilyOption,
@@ -60,6 +61,19 @@ export function preloadFonts(): void {
     return
   }
   if (googleFontsEnabled.value) fontManager.preloadGoogleFamilies()
+}
+
+export function preloadBundledFonts(): void {
+  if (typeof document === 'undefined') return
+  for (const url of bundledFontUrls) {
+    if (document.head.querySelector(`link[rel="preload"][href="${url}"]`)) continue
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'fetch'
+    link.crossOrigin = 'anonymous'
+    link.href = url
+    document.head.appendChild(link)
+  }
 }
 
 export function localFontAccessState(): LocalFontAccessState {
