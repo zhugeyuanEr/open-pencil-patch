@@ -29,11 +29,12 @@
   render, so any text node using those scripts rendered as missing-glyph
   boxes until the fallback pack resolved and triggered a re-render. Wait
   for `fontManager.ensureFallbackPack()` before declaring fonts loaded
-  in `loadFonts`, and switch `fetchBundledFont` to resolve through
-  `convertFileSrc` (Tauri 2's official asset URL helper) so the underlying
-  fetch doesn't race the custom-protocol handler on first launch. Add
-  `<link rel="preload">` hints and re-enable `assetProtocol` plus
-  `bundle.resources` for the seven bundled `.ttf` files as belt-and-braces.
+  in `loadFonts`, retry `fetchBundledFont` up to three times with
+  exponential backoff so a cold-start Tauri protocol race doesn't lose
+  the first font fetch, switch the URL through `convertFileSrc` (Tauri
+  2's official asset URL helper), add `<link rel="preload">` hints, and
+  re-enable `assetProtocol` plus `bundle.resources` for the seven
+  bundled `.ttf` files as belt-and-braces.
 
 ## 0.13.2 — 2026-05-30
 

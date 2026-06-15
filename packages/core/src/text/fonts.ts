@@ -226,8 +226,25 @@ export class FontManager {
   async fetchBundledFont(url: string): Promise<ArrayBuffer | null> {
     if (IS_BROWSER) {
       const assetUrl = await resolveBundledFontUrl(url)
-      const response = await fetch(assetUrl)
-      return response.arrayBuffer()
+      let lastError: unknown = null
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await fetch(assetUrl)
+          if (response.ok) {
+            return await response.arrayBuffer()
+          }
+          lastError = new Error(`HTTP ${response.status}`)
+        } catch (e) {
+          lastError = e
+        }
+        if (attempt < 2) {
+          await new Promise<void>((resolve) => {
+            setTimeout(resolve, 80 * (attempt + 1))
+          })
+        }
+      }
+      console.warn(`Bundled font fetch failed after 3 attempts: ${assetUrl}`, lastError)
+      return null
     }
     const { readFile } = await import(/* @vite-ignore */ 'node:fs/promises')
     const { resolve, dirname } = await import(/* @vite-ignore */ 'node:path')
