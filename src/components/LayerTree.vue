@@ -14,11 +14,17 @@ defineOptions({ inheritAttrs: false })
 const INDENT = 16
 const attrs = useAttrs()
 const store = useEditorStore()
-const renameInput = templateRef<HTMLInputElement>('renameInput')
+const renameInput = templateRef<HTMLInputElement | HTMLInputElement[]>('renameInput')
 const rename = useInlineRename((id, name) => store.renameNode(id, name))
 const { menu: t } = useI18n()
 
-watch(renameInput, (input) => {
+function pickInput(ref: HTMLInputElement | HTMLInputElement[] | null): HTMLInputElement | null {
+  if (!ref) return null
+  return Array.isArray(ref) ? (ref[0] ?? null) : ref
+}
+
+watch(renameInput, (ref) => {
+  const input = pickInput(ref)
   if (input) void rename.focusInput(input)
 })
 

@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ScrollAreaRoot, ScrollAreaScrollbar, ScrollAreaThumb, ScrollAreaViewport } from 'reka-ui'
-import { refAutoReset } from '@vueuse/core'
-import { computed, markRaw, nextTick, ref, watch } from 'vue'
+import { refAutoReset, useEventListener } from '@vueuse/core'
+import { computed, markRaw, nextTick, onUnmounted, ref, watch } from 'vue'
 
 import { getAcpDebugText, clearAcpDebugLog, hasAcpDebugEntries } from '@/app/ai/acp/transport'
 import { copyChatLog } from '@/app/ai/debug'
 import { clearToolLogEntries, didHitStepLimit } from '@/app/ai/tools'
 import { activeTab } from '@/app/tabs'
 import AcpPermissionDialog from '@/components/chat/AcpPermissionDialog.vue'
+import ChatExportMenu from '@/components/chat/ChatExportMenu.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
+import ChatSessionMenu from '@/components/chat/ChatSessionMenu.vue'
 import AppTextButton from '@/components/ui/AppTextButton.vue'
 import ProviderSetup from '@/components/chat/ProviderSetup.vue'
 import { useAIChat } from '@/app/ai/chat/use'
@@ -22,10 +24,11 @@ import type { JsonObject } from '@open-pencil/core/types'
 
 const IS_DEV = import.meta.env.DEV
 
-const { isConfigured, ensureChat, resetChat } = useAIChat()
+const { isConfigured, ensureChat, clearCurrentSessionMessages, flushChat, sessions } = useAIChat()
 const { dialogs } = useI18n()
 
 const chat = ref<Chat<UIMessage> | null>(null)
+const sessionStore = computed(() => sessions.value)
 
 ensureChat().then((c) => {
   if (c) chat.value = markRaw(c)
@@ -36,6 +39,7 @@ const acpLogCopied = refAutoReset(false, 1500)
 
 const messages = computed(() => chat.value?.messages ?? [])
 const status = computed(() => chat.value?.status ?? 'ready')
+const isChatBusy = computed(() => status.value === 'submitted' || status.value === 'streaming')
 const isThinking = computed(() => {
   const s = status.value
   if (s !== 'submitted' && s !== 'streaming') return false
@@ -65,12 +69,20 @@ function scrollToBottom() {
 }
 
 watch(messages, scrollToBottom, { deep: true })
+
+// Persist every message change into the active sessions store.
+// sessions store is the source of truth; ai-sdk Chat is just the live runtime.
 watch(
-  () => chat.value?.error,
-  (error) => {
-    if (error) toast.error(error.message)
-  }
+  messages,
+  (msgs) => {
+    const s = sessionStore.value
+    if (s) s.setMessages(msgs as UIMessage[])
+  },
+  { deep: true }
 )
+
+// When active tab changes, ask the chat manager to rebuild a Chat instance
+// for the new doc (transports.ts swaps the sessions store automatically).
 watch(
   () => activeTab.value?.id,
   async () => {
@@ -79,8 +91,29 @@ watch(
   }
 )
 
+watch(
+  () => chat.value?.error,
+  (error) => {
+    if (error) toast.error(error.message)
+  }
+)
+
+watch(isChatBusy, (busy, wasBusy) => {
+  if (!busy && wasBusy) flushCurrentChat()
+})
+
+function flushCurrentChat() {
+  void flushChat()
+}
+
+onUnmounted(flushCurrentChat)
+useEventListener(window, 'pagehide', flushCurrentChat)
+useEventListener(document, 'visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushCurrentChat()
+})
+
 async function handleSubmit(text: string) {
-  if (status.value === 'streaming' || status.value === 'submitted') return
+  if (isChatBusy.value) return
   try {
     const c = await ensureChat()
     if (c) chat.value = markRaw(c)
@@ -113,9 +146,15 @@ async function handleCopyAcpLog() {
 
 function handleClearChat() {
   chat.value = null
-  resetChat()
+  clearCurrentSessionMessages()
   clearToolLogEntries()
   clearAcpDebugLog()
+}
+
+async function onSessionSwitched() {
+  const nextChat = await ensureChat()
+  chat.value = nextChat ? markRaw(nextChat) : null
+  await flushChat()
 }
 </script>
 
@@ -124,6 +163,17 @@ function handleClearChat() {
     <ProviderSetup v-if="!isConfigured" />
 
     <template v-else>
+      <header
+        v-if="sessionStore"
+        class="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1"
+      >
+        <ChatSessionMenu
+          :store="sessionStore"
+          :disabled="isChatBusy"
+          @switched="onSessionSwitched"
+        />
+      </header>
+
       <ScrollAreaRoot class="min-h-0 flex-1">
         <ScrollAreaViewport class="h-full px-3 py-3 [&>div]:h-full">
           <!-- Empty state -->
@@ -187,6 +237,7 @@ function handleClearChat() {
         v-if="messages.length > 0"
         class="flex shrink-0 items-center gap-1 border-t border-border px-3 py-1"
       >
+        <ChatExportMenu :messages="messages" />
         <AppTextButton
           v-if="IS_DEV"
           :ui="{ base: 'flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover' }"

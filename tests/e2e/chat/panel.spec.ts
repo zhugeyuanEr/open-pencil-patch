@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises'
+
 import { expect, test, type Page } from '@playwright/test'
 
 import { CanvasHelper } from '#tests/helpers/canvas'
@@ -7,12 +9,16 @@ const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY ?? ''
 
 let page: Page
 let canvas: CanvasHelper
+const modKey = process.platform === 'darwin' ? 'Meta' : 'Control'
 
 test.describe.configure({ mode: 'serial' })
+test.setTimeout(30_000)
 
 test.beforeAll(async ({ browser }) => {
+  test.setTimeout(30_000)
   page = await browser.newPage()
-  await page.goto('/')
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
   canvas = new CanvasHelper(page)
   await canvas.waitForInit()
 
@@ -111,46 +117,71 @@ async function injectMockTransport(page: Page) {
 }
 
 function chatTab() {
-  return page.getByRole('tab', { name: 'AI' })
+  return page.getByRole('tab', { name: /^AI$/ })
 }
 
 function designTab() {
-  return page.getByRole('tab', { name: 'Design' })
+  return page.getByRole('tab', { name: /^(Design|设计)$/ })
 }
 
 function chatInput() {
-  return page.locator('input[placeholder="Describe a change…"]')
+  return page.getByTestId('chat-input')
 }
 
 function apiKeyInput() {
   return page.getByTestId('api-key-input')
 }
 
+async function sendChatMessage(text: string) {
+  await chatInput().fill(text)
+  await chatInput().press('Enter')
+  await expect(page.getByText(text, { exact: true })).toBeVisible({ timeout: 5000 })
+  if (!USE_REAL_LLM) {
+    await expect(page.getByText(`I'll help you with: "${text}"`, { exact: false })).toBeVisible({
+      timeout: 5000
+    })
+  }
+}
+
+async function openSessionMenu() {
+  await page.getByTestId('chat-session-toggle').click()
+  await expect(page.getByTestId('chat-session-dropdown')).toBeVisible()
+}
+
+async function switchChatSession(name: string) {
+  await openSessionMenu()
+  await page
+    .getByTestId('chat-session-item')
+    .filter({ hasText: name })
+    .getByText(name, { exact: true })
+    .click()
+}
+
 test('⌘J switches to AI tab', async () => {
   await designTab().waitFor()
-  await page.keyboard.press('Meta+j')
+  await page.keyboard.press(`${modKey}+j`)
   await expect(chatTab()).toHaveAttribute('data-state', 'active')
 })
 
 test('⌘J switches back to Design tab', async () => {
-  await page.keyboard.press('Meta+j')
+  await page.keyboard.press(`${modKey}+j`)
   await expect(designTab()).toHaveAttribute('data-state', 'active')
 })
 
 test('clicking AI tab shows provider setup when no key set', async () => {
   await chatTab().click()
   await expect(apiKeyInput()).toBeVisible()
-  await expect(page.getByText('Connect an AI provider to start chatting.')).toBeVisible()
+  await expect(page.getByTestId('provider-setup')).toBeVisible()
   await expect(page.getByTestId('provider-custom-model')).toBeHidden()
 })
 
 test('saving API key shows chat interface', async () => {
   const key = USE_REAL_LLM ? OPENROUTER_KEY : 'sk-or-test-key-12345'
   await apiKeyInput().fill(key)
-  await page.locator('button:has-text("Connect")').click()
+  await page.getByTestId('api-key-save').click()
 
   await expect(chatInput()).toBeVisible()
-  await expect(page.getByText('Describe what you want to create or change.')).toBeVisible()
+  await expect(page.getByTestId('chat-empty-state')).toBeVisible()
 })
 
 test('empty input has disabled send button', async () => {
@@ -220,6 +251,81 @@ test('switching tabs preserves chat', async () => {
 
   await chatTab().click()
   await expect(page.getByText('Hello there', { exact: true })).toBeVisible({ timeout: 10000 })
+})
+
+test('chat sessions persist across reload', async () => {
+  test.skip(USE_REAL_LLM, 'session persistence E2E uses the mock chat transport')
+
+  await openSessionMenu()
+  await page.getByTestId('chat-session-new').click()
+  await expect(page.getByTestId('chat-empty-state')).toBeVisible()
+
+  await sendChatMessage('Second session marker')
+  await switchChatSession('New session')
+  await expect(page.getByText('Hello there', { exact: true })).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('Second session marker', { exact: true })).toBeHidden()
+
+  await switchChatSession('Session 2')
+  await expect(page.getByText('Second session marker', { exact: true })).toBeVisible({
+    timeout: 5000
+  })
+
+  await page.reload()
+  await canvas.waitForInit()
+  await injectMockTransport(page)
+  await chatTab().click()
+
+  await expect(chatInput()).toBeVisible()
+  await expect(page.getByText('Second session marker', { exact: true })).toBeVisible({
+    timeout: 10000
+  })
+  await switchChatSession('New session')
+  await expect(page.getByText('Hello there', { exact: true })).toBeVisible({ timeout: 5000 })
+})
+
+test('chat export menu copies and downloads markdown', async () => {
+  test.skip(USE_REAL_LLM, 'export E2E relies on deterministic mock chat content')
+
+  await page.getByTestId('chat-export-toggle').click()
+  await page.getByTestId('chat-export-copy-markdown').click()
+  const markdown = await page.evaluate(() => navigator.clipboard.readText())
+  expect(markdown).toContain('# AI chat export')
+  expect(markdown).toContain('## user')
+  expect(markdown).toContain('Hello there')
+
+  await page.getByTestId('chat-export-toggle').click()
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByTestId('chat-export-download-markdown').click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/^openpencil-chat-\d{8}-\d{4}\.md$/)
+  const path = await download.path()
+  if (path) {
+    const downloadedMarkdown = await readFile(path, 'utf8')
+    expect(downloadedMarkdown).toContain('Hello there')
+  }
+})
+
+test('document tabs keep separate chat context', async () => {
+  test.skip(USE_REAL_LLM, 'document persistence E2E uses the mock chat transport')
+
+  await sendChatMessage('First document marker')
+  await page.keyboard.press(`${modKey}+N`)
+  await expect(page.getByTestId('tabbar-tab')).toHaveCount(2)
+  await chatTab().click()
+  await expect(page.getByTestId('chat-empty-state')).toBeVisible({ timeout: 5000 })
+
+  await sendChatMessage('Second document marker')
+  await page.getByTestId('tabbar-tab').nth(0).click()
+  await expect(page.getByText('First document marker', { exact: true })).toBeVisible({
+    timeout: 5000
+  })
+  await expect(page.getByText('Second document marker', { exact: true })).toBeHidden()
+
+  await page.getByTestId('tabbar-tab').nth(1).click()
+  await expect(page.getByText('Second document marker', { exact: true })).toBeVisible({
+    timeout: 5000
+  })
+  await expect(page.getByText('First document marker', { exact: true })).toBeHidden()
 })
 
 test('OpenRouter accepts a custom model ID from provider settings', async () => {

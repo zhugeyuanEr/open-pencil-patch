@@ -1,17 +1,27 @@
 import { Chat } from '@ai-sdk/vue'
 import { DirectChatTransport, stepCountIs, ToolLoopAgent } from 'ai'
 import type { ChatTransport, UIMessage } from 'ai'
-import type { ComputedRef, Ref } from 'vue'
+import { computed, ref, type ComputedRef, type Ref } from 'vue'
 
 import { ACP_AGENTS } from '@open-pencil/core/constants'
 import type { ACPAgentID, AIProviderID } from '@open-pencil/core/constants'
 
 import { createLanguageModel, resolveLanguageModelID } from '@/app/ai/chat/model'
+import {
+  createChatSessionsStore,
+  type ChatSessionsStore,
+  deleteChatSessions,
+  docKeyForTab,
+  loadChatDocStorage,
+  loadChatSessionsStore
+} from '@/app/ai/chat/sessions'
 import SYSTEM_PROMPT from '@/app/ai/chat/system-prompt.md?raw'
 import { MAX_AGENT_STEPS, createAITools, recordStepUsage, resetRunSteps } from '@/app/ai/tools'
 import type { getActiveEditorStore } from '@/app/editor/active-store'
+import { activeTab } from '@/app/tabs'
 
 type EditorStore = ReturnType<typeof getActiveEditorStore>
+type TaggedChat = Chat<UIMessage> & { _docKey?: string; _sessionId?: string }
 
 type ChatSessionOptions = {
   isConfigured: ComputedRef<boolean>
@@ -87,7 +97,6 @@ export function createToolLoopTransport({
     instructions: SYSTEM_PROMPT,
     tools,
     stopWhen: stepCountIs(MAX_AGENT_STEPS),
-    maxOutputTokens,
     providerOptions: cacheProviderOptions,
     prepareCall: (options) => {
       resetRunSteps(store)
@@ -128,15 +137,19 @@ export function createChatSessionManager({
 }: ChatSessionOptions) {
   let transportDirty = false
   let currentChatStore: EditorStore | null = null
-  let currentChatMessages = new WeakMap<EditorStore, UIMessage[]>()
   let chat: Chat<UIMessage> | null = null
+  let currentChatSessions: ChatSessionsStore | null = null
   let acpTransportInstance: { destroy(): Promise<void> } | null = null
   let overrideTransport: (() => ChatTransport<UIMessage>) | null = null
 
+  let ensureVersion = 0
+  const docKeysByStore = new WeakMap<EditorStore, string>()
+  const sessionsByDocKey = new Map<string, ChatSessionsStore>()
+  const sessionLoads = new Map<string, Promise<ChatSessionsStore>>()
+  const sessionsStore = ref<ChatSessionsStore | null>(null)
+
   function markTransportDirty() {
     transportDirty = true
-    currentChatStore = null
-    currentChatMessages = new WeakMap()
   }
 
   async function createActiveACPTransport() {
@@ -164,31 +177,133 @@ export function createChatSessionManager({
     })
   }
 
+  function computeDocKey(store: EditorStore): string {
+    const tabId = activeTab.value?.id ?? 'unknown'
+    return docKeyForTab(tabId, store.getFilePath(), store.state.documentName)
+  }
+
+  async function loadOrReuseSessions(
+    store: EditorStore,
+    docKey: string
+  ): Promise<ChatSessionsStore> {
+    const previousDocKey = docKeysByStore.get(store)
+    if (previousDocKey && previousDocKey !== docKey) {
+      await migrateStoreDocKey(store, previousDocKey, docKey)
+    }
+    docKeysByStore.set(store, docKey)
+    return loadSessionsForDocKey(docKey)
+  }
+
+  async function loadSessionsForDocKey(docKey: string): Promise<ChatSessionsStore> {
+    const cached = sessionsByDocKey.get(docKey)
+    if (cached) return cached
+
+    let load = sessionLoads.get(docKey)
+    if (!load) {
+      load = loadChatSessionsStore(docKey).then((store) => {
+        sessionsByDocKey.set(docKey, store)
+        sessionLoads.delete(docKey)
+        return store
+      })
+      sessionLoads.set(docKey, load)
+    }
+    return load
+  }
+
+  async function migrateStoreDocKey(
+    store: EditorStore,
+    previousDocKey: string,
+    nextDocKey: string
+  ): Promise<void> {
+    if (!nextDocKey.startsWith('fp:') || previousDocKey.startsWith('fp:')) return
+
+    const previousStore = sessionsByDocKey.get(previousDocKey)
+    if (!previousStore) return
+
+    if (currentChatStore === store && chat) {
+      previousStore.setMessages(chat.messages)
+    }
+    await previousStore.flush()
+
+    const existingTarget = await loadChatDocStorage(nextDocKey)
+    let deletePreviousDocKey = false
+    if (!existingTarget) {
+      const migrated = createChatSessionsStore({
+        docKey: nextDocKey,
+        initialStorage: previousStore.getStorageSnapshot()
+      })
+      sessionsByDocKey.set(nextDocKey, migrated)
+      await migrated.flush()
+      deletePreviousDocKey = true
+    }
+
+    sessionsByDocKey.delete(previousDocKey)
+    await previousStore.dispose()
+    if (deletePreviousDocKey) {
+      await deleteChatSessions(previousDocKey)
+    }
+  }
+
+  function syncCurrentChatMessages() {
+    if (chat && currentChatSessions) {
+      const taggedChat = chat as TaggedChat
+      if (taggedChat._sessionId) {
+        currentChatSessions.setSessionMessages(taggedChat._sessionId, chat.messages)
+      } else {
+        currentChatSessions.setMessages(chat.messages)
+      }
+    }
+  }
+
   async function ensureChat(): Promise<Chat<UIMessage> | null> {
     if (!isConfigured.value) return null
 
+    const requestVersion = ++ensureVersion
     const store = getActiveEditorStore()
-    if (currentChatStore && chat) {
-      currentChatMessages.set(currentChatStore, chat.messages)
-    }
+    syncCurrentChatMessages()
 
-    if (!chat || transportDirty || currentChatStore !== store) {
-      const messages = currentChatMessages.get(store)
+    const docKey = computeDocKey(store)
+    const sessions = await loadOrReuseSessions(store, docKey)
+    const stillCurrent =
+      requestVersion === ensureVersion &&
+      getActiveEditorStore() === store &&
+      computeDocKey(store) === docKey
+    if (!stillCurrent) return chat
+
+    sessionsStore.value = sessions
+    const currentSession = sessions.getCurrentSession()
+
+    const needsNewTransport = transportDirty || currentChatStore !== store
+    const taggedChat = chat as TaggedChat | null
+    const needsNewSession = taggedChat
+      ? taggedChat._docKey !== docKey || taggedChat._sessionId !== currentSession.id
+      : true
+    const needsNewChat = !chat || needsNewTransport || needsNewSession
+
+    if (needsNewChat) {
       const transport: ChatTransport<UIMessage> = isACPProvider.value
         ? await createActiveACPTransport()
         : createTransport(store)
-      chat = new Chat<UIMessage>({ transport, messages })
+      chat = new Chat<UIMessage>({ transport, messages: currentSession.messages })
+      ;(chat as TaggedChat)._docKey = docKey
+      ;(chat as TaggedChat)._sessionId = currentSession.id
       currentChatStore = store
+      currentChatSessions = sessions
       transportDirty = false
+    } else {
+      currentChatStore = store
+      currentChatSessions = sessions
     }
     return chat
   }
 
-  function resetChat() {
-    if (currentChatStore) currentChatMessages.delete(currentChatStore)
+  function clearCurrentSessionMessages() {
+    if (sessionsStore.value) {
+      sessionsStore.value.setMessages([])
+    }
     chat = null
     currentChatStore = null
-    transportDirty = false
+    currentChatSessions = null
   }
 
   function setOverrideTransport(factory: (() => ChatTransport<UIMessage>) | null) {
@@ -196,5 +311,19 @@ export function createChatSessionManager({
     markTransportDirty()
   }
 
-  return { ensureChat, resetChat, markTransportDirty, setOverrideTransport }
+  async function flush(): Promise<void> {
+    syncCurrentChatMessages()
+    await Promise.all(Array.from(sessionsByDocKey.values(), (store) => store.flush()))
+  }
+
+  const sessions = computed<ChatSessionsStore | null>(() => sessionsStore.value)
+
+  return {
+    ensureChat,
+    clearCurrentSessionMessages,
+    markTransportDirty,
+    setOverrideTransport,
+    flush,
+    sessions
+  }
 }

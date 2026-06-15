@@ -14,6 +14,8 @@ dist-ssr
 # Tauri updater private signing keys
 /desktop/*.key
 !/desktop/*.key.pub
+/desktop/*.exe
+/desktop/*.zip
 
 # Copied from node_modules at build time
 public/canvaskit.wasm
@@ -51,3 +53,6 @@ scratch/
 
 # OpenCode
 .opencode/
+
+# Local Claude Code preview config (per-machine absolute paths)
+.claude/launch.json
