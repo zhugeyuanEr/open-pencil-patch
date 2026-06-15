@@ -2,23 +2,28 @@
 
 ## Unreleased
 
-### Changed
+## 0.13.3 — 2026-06-15
 
-- Add JSX authoring support for components, component sets, and instances.
-- Add type-validated `bindVariable`/`unbindVariable` with event emission and indexed binding format (`fills/N/color` instead of `fills[N]`).
-- Add `unbind_variable` MCP tool for removing variable bindings.
+### Added
+
+- Persist AI chat sessions per document to IndexedDB. Conversations survive
+  closing and reopening a `.fig`/`.pen` file, and switching between documents
+  restores each doc's own session history. Each doc supports multiple
+  named sessions with rename, delete, and switch.
+- Add a `ChatExportMenu` to the AI chat toolbar — copy the current session
+  as plain text or Markdown, or download it as a `.md` file.
+- Expose `EditorStore.getFilePath` so the chat persistence layer can derive
+  a stable `docKey` per document.
 
 ### Fixes
 
-- Fix clone operations (duplicate, instance creation, clipboard copy) sharing mutable references with the original — editing fills, strokes, variable bindings, overrides, or vector networks on one no longer corrupts the other.
-- Fix instance overrides shallow-copied on clone — override values containing objects are now deep-copied.
-- Fix stale variable bindings not cleaned up when fills/strokes arrays shrink — any indexed sub-path is now handled, not just `/color`.
-- Fix tooltips around inspector dropdowns/popovers without breaking floating menu anchoring.
-- Fix CJK canvas text rendering by bundling an offline Noto Sans SC fallback font for CanvasKit.
-- Harden MCP calls with bounded page-tree responses, oversized-result errors, JSON HTTP responses, and stale WebSocket cleanup.
-- Improve Figma boolean imports by preserving XOR operations as editable exclude nodes and falling back to imported fill geometry when boolean path reconstruction cannot produce a path.
-- Preserve rotated Figma transform origins for imported vector nodes.
-- Render complex text fills through vector glyph outlines so imported Figma text can use the normal fill pipeline for gradients, images, patterns, and other non-solid paints.
+- Fix `LayerTree.vue` rename input not focusing when the row is inside the
+  flattened `v-for`. Vue collected the `ref="renameInput"` as an array,
+  making `.focus` undefined; switched to a function ref that handles both
+  single-element and array bindings.
+- Allow chat e2e tests to find the AI tab by both English ("AI") and
+  Chinese ("AI") labels, and grant clipboard permissions for the
+  copy-as-text / copy-as-Markdown exports.
 
 ## 0.13.2 — 2026-05-30
 
