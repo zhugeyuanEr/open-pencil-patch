@@ -18,7 +18,13 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "**"
+        ]
+      }
     }
   },
   "bundle": {
@@ -32,6 +38,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "../public/Inter-Regular.ttf": "Inter-Regular.ttf",
+      "../public/Inter-Medium.ttf": "Inter-Medium.ttf",
+      "../public/Inter-SemiBold.ttf": "Inter-SemiBold.ttf",
+      "../public/Inter-Bold.ttf": "Inter-Bold.ttf",
+      "../public/Inter-ExtraBold.ttf": "Inter-ExtraBold.ttf",
+      "../public/NotoSansSC-Regular.ttf": "NotoSansSC-Regular.ttf",
+      "../public/NotoNaskhArabic-Regular.ttf": "NotoNaskhArabic-Regular.ttf"
+    },
     "fileAssociations": [
       {
         "ext": ["pen"],
