@@ -14,11 +14,6 @@
   as plain text or Markdown, or download it as a `.md` file.
 - Expose `EditorStore.getFilePath` so the chat persistence layer can derive
   a stable `docKey` per document.
-- List bundled font files in `desktop/tauri.conf.json` under
-  `bundle.resources`, and enable the asset protocol with a permissive
-  `**` scope, so CanvasKit can fetch `Inter-*.ttf` and `Noto*.ttf` at
-  runtime in production builds (was previously failing silently and
-  falling back to tofu glyphs on every text node).
 
 ### Fixes
 
