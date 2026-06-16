@@ -3,7 +3,8 @@ import { uniq } from 'es-toolkit/array'
 
 import { DEFAULT_FONT_FAMILY, IS_BROWSER, GOOGLE_FONTS_API_KEY } from '#core/constants'
 import type { SceneGraph } from '#core/scene-graph'
-import { bundledFontUrl, resolveBundledFontUrl } from '#core/text/bundled'
+import { bundledFontUrl } from '#core/text/bundled'
+import { fetchBundledFontFromUrl } from '#core/text/bundled-fetch'
 import { fontFaceRenderFamily, parseFontStyle } from '#core/text/face'
 import { fontFallbackEntry } from '#core/text/fallbacks'
 import type { FontFallbackScript } from '#core/text/fallbacks'
@@ -225,26 +226,7 @@ export class FontManager {
 
   async fetchBundledFont(url: string): Promise<ArrayBuffer | null> {
     if (IS_BROWSER) {
-      const assetUrl = await resolveBundledFontUrl(url)
-      let lastError: unknown = null
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const response = await fetch(assetUrl)
-          if (response.ok) {
-            return await response.arrayBuffer()
-          }
-          lastError = new Error(`HTTP ${response.status}`)
-        } catch (e) {
-          lastError = e
-        }
-        if (attempt < 2) {
-          await new Promise<void>((resolve) => {
-            setTimeout(resolve, 80 * (attempt + 1))
-          })
-        }
-      }
-      console.warn(`Bundled font fetch failed after 3 attempts: ${assetUrl}`, lastError)
-      return null
+      return fetchBundledFontFromUrl(url)
     }
     const { readFile } = await import(/* @vite-ignore */ 'node:fs/promises')
     const { resolve, dirname } = await import(/* @vite-ignore */ 'node:path')

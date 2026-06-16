@@ -277,6 +277,26 @@ describe('createChatSessionManager', () => {
     expect(store.has(storageKey('fp:/saved/draft.fig'))).toBe(true)
   })
 
+  test('rekeys the same store when an opened file path becomes available', async () => {
+    const activeStore = makeMutableEditorStore(null, 'Untitled')
+    const manager = createTestManager(() => activeStore)
+    manager.setOverrideTransport(createMockTransport)
+
+    const chat = await manager.ensureChat()
+    chat?.messages.push(...sampleMessages)
+    await manager.flush()
+
+    activeStore.state.documentName = 'Opened Design'
+    activeStore.setFilePath('/saved/opened.fig')
+    await manager.ensureChat()
+    await manager.flush()
+
+    expect(manager.sessions.value?.docKey).toBe('fp:/saved/opened.fig')
+    expect(manager.sessions.value?.getCurrentSession().messages).toEqual(sampleMessages)
+    expect(store.has(storageKey('tab:unknown'))).toBe(false)
+    expect(store.has(storageKey('fp:/saved/opened.fig'))).toBe(true)
+  })
+
   test('does not overwrite an existing file-path chat during migration', async () => {
     const target = createDefaultStorage()
     target.sessions[0].messages = [makeMessage('assistant', 'existing target', 'target')]
@@ -339,6 +359,17 @@ function makeEditorStore(filePath: string | null, documentName: string): TestEdi
   return {
     state: { documentName },
     getFilePath: () => filePath
+  }
+}
+
+function makeMutableEditorStore(filePath: string | null, documentName: string) {
+  let currentFilePath = filePath
+  return {
+    state: { documentName },
+    getFilePath: () => currentFilePath,
+    setFilePath: (path: string | null) => {
+      currentFilePath = path
+    }
   }
 }
 

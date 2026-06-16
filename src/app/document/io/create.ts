@@ -11,6 +11,7 @@ type DocumentIOState = EditorState & {
   documentName: string
   loading: boolean
   autosaveEnabled: boolean
+  documentSourceVersion: number
 }
 
 export function createDocumentIOActions(

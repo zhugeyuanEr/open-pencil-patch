@@ -14,6 +14,10 @@
   as plain text or Markdown, or download it as a `.md` file.
 - Expose `EditorStore.getFilePath` so the chat persistence layer can derive
   a stable `docKey` per document.
+- Add JSX authoring support for components, component sets, and instances.
+- Add type-validated `bindVariable`/`unbindVariable` with event emission and
+  indexed binding format (`fills/N/color` instead of `fills[N]`).
+- Add `unbind_variable` MCP tool for removing variable bindings.
 
 ### Fixes
 
@@ -24,6 +28,26 @@
 - Allow chat e2e tests to find the AI tab by both English ("AI") and
   Chinese ("AI") labels, and grant clipboard permissions for the
   copy-as-text / copy-as-Markdown exports.
+- Fix clone operations (duplicate, instance creation, clipboard copy) sharing
+  mutable references with the original — editing fills, strokes, variable
+  bindings, overrides, or vector networks on one no longer corrupts the other.
+- Fix instance overrides shallow-copied on clone — override values containing
+  objects are now deep-copied.
+- Fix stale variable bindings not cleaned up when fills/strokes arrays shrink —
+  any indexed sub-path is now handled, not just `/color`.
+- Fix tooltips around inspector dropdowns/popovers without breaking floating
+  menu anchoring.
+- Fix CJK canvas text rendering by bundling an offline Noto Sans SC fallback
+  font for CanvasKit.
+- Harden MCP calls with bounded page-tree responses, oversized-result errors,
+  JSON HTTP responses, and stale WebSocket cleanup.
+- Improve Figma boolean imports by preserving XOR operations as editable
+  exclude nodes and falling back to imported fill geometry when boolean path
+  reconstruction cannot produce a path.
+- Preserve rotated Figma transform origins for imported vector nodes.
+- Render complex text fills through vector glyph outlines so imported Figma
+  text can use the normal fill pipeline for gradients, images, patterns, and
+  other non-solid paints.
 - Fix tofu glyphs in cold-start Tauri 2 desktop builds. Wait for
   `fontManager.ensureFallbackPack()` before declaring fonts loaded in
   `loadFonts`, and retry `fetchBundledFont` up to three times with
@@ -35,9 +59,9 @@
   WebView2's fetch stack; the above retry alone is sufficient to clear
   the tofu on cold start without it, and the rollback restores outbound
   HTTPS to the AI provider.
-- Fix the built-in `minimax` (MiniMax) provider pointing at
-  `https://api.minimax.io/v1`, which 404s. Use the real endpoint
-  `https://api.minimaxi.com/v1` so the preset works out of the box.
+- Fix the built-in `minimax` (MiniMax) preset for the `minimaxi.com` entrypoint
+  by using `https://api.minimaxi.com/v1` instead of the previous
+  `https://api.minimax.io/v1` base URL.
 - Reload AI chat sessions on first open of a file. The tab id doesn't
   change when a file is opened in the active tab, so the previous
   `watch(activeTab.id)` never fired and `ensureChat` ran with whatever

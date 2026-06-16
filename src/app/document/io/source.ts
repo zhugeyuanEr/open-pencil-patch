@@ -13,6 +13,7 @@ import { createDocumentSourceState } from '@/app/document/io/source-state'
 type DocumentSourceState = EditorState & {
   documentName: string
   autosaveEnabled: boolean
+  documentSourceVersion: number
 }
 
 export { createDocumentSourceState }
@@ -77,6 +78,10 @@ export function createDocumentSourceActions({
     saveCurrentDocument: async () => writeFile(await buildFigFile())
   })
 
+  function markDocumentSourceChanged() {
+    state.documentSourceVersion += 1
+  }
+
   function setDocumentSource(
     fileName: string,
     sourceFormat: string,
@@ -88,6 +93,7 @@ export function createDocumentSourceActions({
     setFileHandle(isFig ? (handle ?? null) : null)
     setFilePath(isFig ? (path ?? null) : null)
     setDownloadName(figDownloadName(fileName, sourceFormat))
+    markDocumentSourceChanged()
     setSavedVersion(state.sceneVersion)
     if (isFig && (handle || path)) {
       void startWatchingFile()
@@ -101,6 +107,7 @@ export function createDocumentSourceActions({
     const downloadName = downloadNameFromPath(path)
     setDownloadName(downloadName)
     state.documentName = documentNameFromFigPath(downloadName)
+    markDocumentSourceChanged()
   }
 
   function startWatchingCurrentFile() {

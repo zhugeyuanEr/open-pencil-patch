@@ -27,6 +27,7 @@ const IS_DEV = import.meta.env.DEV
 
 const { isConfigured, ensureChat, clearCurrentSessionMessages, flushChat, sessions } = useAIChat()
 const { dialogs } = useI18n()
+const editorStore = useEditorStore()
 
 const chat = ref<Chat<UIMessage> | null>(null)
 const sessionStore = computed(() => sessions.value)
@@ -92,15 +93,14 @@ watch(
   }
 )
 
-// Also re-ensure when the active document's file path or name changes
+// Also re-ensure when the active document source or name changes
 // (e.g., on first open of a file in the current tab, the tab id is the
-// same but the editor's filePath / documentName flips to the real values
-// — without this the chat sessions are loaded under the wrong docKey).
+// same but documentName and the non-reactive source path are filled in later).
 watch(
-  () => {
-    const store = useEditorStore()
-    return `${store.getFilePath() ?? ''}::${store.state.documentName ?? ''}`
-  },
+  () =>
+    `${activeTab.value?.id ?? ''}::${editorStore.state.documentName ?? ''}::${
+      editorStore.state.documentSourceVersion
+    }`,
   async () => {
     const nextChat = await ensureChat()
     chat.value = nextChat ? markRaw(nextChat) : null

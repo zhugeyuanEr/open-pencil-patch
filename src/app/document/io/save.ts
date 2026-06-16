@@ -6,7 +6,10 @@ import { chooseBrowserFigSaveHandle, chooseTauriFigSavePath } from '@/app/docume
 import { createDocumentWriter } from '@/app/document/io/write'
 import { IS_TAURI } from '@/constants'
 
-type SaveDocumentState = EditorState & { documentName: string }
+type SaveDocumentState = EditorState & {
+  documentName: string
+  documentSourceVersion: number
+}
 
 type SaveActionsOptions = {
   state: SaveDocumentState
@@ -43,6 +46,10 @@ export function createSaveActions({
     setLastWriteTime
   })
 
+  function markDocumentSourceChanged() {
+    state.documentSourceVersion += 1
+  }
+
   async function saveFigFile() {
     const filePath = getFilePath()
     const fileHandle = getFileHandle()
@@ -65,6 +72,7 @@ export function createSaveActions({
       setFilePath(path)
       setFileHandle(null)
       state.documentName = documentNameFromFigPath(path)
+      markDocumentSourceChanged()
       await writeFile(data)
       startWatchingFile()
       return
@@ -76,6 +84,7 @@ export function createSaveActions({
       setFileHandle(handle)
       setFilePath(null)
       state.documentName = documentNameFromFigPath(handle.name)
+      markDocumentSourceChanged()
       await writeFile(data)
       startWatchingFile()
       return
@@ -85,6 +94,7 @@ export function createSaveActions({
     if (!filename) return
     setDownloadName(filename)
     state.documentName = documentNameFromFigPath(filename)
+    markDocumentSourceChanged()
     downloadBlob(new Uint8Array(data), filename, 'application/octet-stream')
   }
 

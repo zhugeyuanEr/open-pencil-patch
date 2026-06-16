@@ -14,6 +14,7 @@ export function createInitialAppEditorState(pageId: string): AppEditorState {
     mobileDrawerSnap: 'closed',
     clipboardHtml: '',
     autosaveEnabled: false,
+    documentSourceVersion: 0,
     cursorCanvasX: null,
     cursorCanvasY: null,
     nodeEditState: null,
@@ -31,6 +32,7 @@ export type AppEditorState = EditorState & {
   mobileDrawerSnap: 'closed' | 'half' | 'full'
   clipboardHtml: string
   autosaveEnabled: boolean
+  documentSourceVersion: number
   cursorCanvasX: number | null
   cursorCanvasY: number | null
   nodeEditState: NodeEditState | null

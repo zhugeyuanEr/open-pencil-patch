@@ -28,8 +28,12 @@ test('CJK text waits for fallback fonts and repaints after they load', async ({ 
     const originalEnsureArabicFallback = fontManager.ensureArabicFallback.bind(fontManager)
 
     let releaseCJKFallback: (() => void) | null = null
+    let markCJKFallbackRequested: (() => void) | null = null
     const fallbackGate = new Promise<void>((resolve) => {
       releaseCJKFallback = resolve
+    })
+    const cjkFallbackRequested = new Promise<void>((resolve) => {
+      markCJKFallbackRequested = resolve
     })
 
     manager.cjkFallbackFamilies = []
@@ -42,11 +46,13 @@ test('CJK text waits for fallback fonts and repaints after they load', async ({ 
     const originalRender = renderer.renderFromEditorState.bind(renderer)
 
     fontManager.ensureCJKFallback = async () => {
+      markCJKFallbackRequested?.()
       await fallbackGate
       fontManager.setCJKFallbackFamily('Regression CJK Fallback')
       return ['Regression CJK Fallback']
     }
     fontManager.ensureArabicFallback = async () => []
+    renderer.fontsLoaded = false
     renderer.renderFromEditorState = (
       ...args: Parameters<typeof renderer.renderFromEditorState>
     ) => {
@@ -69,32 +75,42 @@ test('CJK text waits for fallback fonts and repaints after they load', async ({ 
     })
 
     try {
-      await renderer.loadFonts(() => {
-        fallbackRenderCount += 1
-        renderer.renderFromEditorState(
-          store.state,
-          store.graph,
-          store.textEditor,
-          800,
-          600,
-          false,
-          'full'
-        )
-      })
+      let loadResolved = false
+      const loadPromise = renderer
+        .loadFonts(() => {
+          fallbackRenderCount += 1
+          renderer.renderFromEditorState(
+            store.state,
+            store.graph,
+            store.textEditor,
+            800,
+            600,
+            false,
+            'full'
+          )
+        })
+        .then(() => {
+          loadResolved = true
+        })
 
-      const loadedBeforeFallback = renderer.isNodeFontLoaded(text)
-      const beforeFallbackRenderCount = fallbackRenderCount
-
-      releaseCJKFallback?.()
+      await cjkFallbackRequested
       await new Promise((resolve) => {
         setTimeout(resolve, 0)
       })
+
+      const resolvedBeforeFallback = loadResolved
+      const fontsLoadedBeforeFallback = renderer.fontsLoaded
+      const callbackCountBeforeFallback = fallbackRenderCount
+
+      releaseCJKFallback?.()
+      await loadPromise
       await new Promise(requestAnimationFrame)
 
       return {
-        loadedBeforeFallback,
+        resolvedBeforeFallback,
+        fontsLoadedBeforeFallback,
+        callbackCountBeforeFallback,
         loadedAfterFallback: renderer.isNodeFontLoaded(text),
-        beforeFallbackRenderCount,
         fallbackRenderCount,
         renderCount
       }
@@ -109,9 +125,10 @@ test('CJK text waits for fallback fonts and repaints after they load', async ({ 
     }
   })
 
-  expect(result.loadedBeforeFallback).toBe(false)
+  expect(result.resolvedBeforeFallback).toBe(false)
+  expect(result.fontsLoadedBeforeFallback).toBe(false)
+  expect(result.callbackCountBeforeFallback).toBe(0)
   expect(result.loadedAfterFallback).toBe(true)
-  expect(result.beforeFallbackRenderCount).toBe(0)
   expect(result.fallbackRenderCount).toBe(1)
   expect(result.renderCount).toBeGreaterThan(0)
   canvas.assertNoErrors()
