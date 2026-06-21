@@ -1,4 +1,4 @@
-import { describe, expect, spyOn, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 
 import { createEditor } from '@open-pencil/core/editor'
 
@@ -44,7 +44,7 @@ describe('page actions', () => {
     expect(after[0].id).toBe(initial[0].id)
   })
 
-  test('deletePage switches to a sibling when current is deleted', () => {
+  test('deletePage switches to a sibling when the current page is deleted', () => {
     const editor = createEditor()
     const initialPageId = editor.graph.getPages()[0].id
     const newPageId = editor.addPage('New')
@@ -56,21 +56,18 @@ describe('page actions', () => {
     expect(editor.state.currentPageId).toBe(initialPageId)
   })
 
-  test('deletePage clears the page viewport entry', () => {
+  test('deletePage does not switch when a non-current page is deleted', () => {
     const editor = createEditor()
-    const pageA = editor.addPage('A')
-    const pageB = editor.addPage('B')
+    const initialPageId = editor.graph.getPages()[0].id
+    editor.addPage('B')
+    const pageC = editor.addPage('C')
 
-    const deleteSpy = spyOn(Map.prototype, 'delete')
-    try {
-      editor.deletePage(pageB)
-      const callsWithPageB = deleteSpy.mock.calls.filter(([key]) => key === pageB)
-      expect(callsWithPageB.length).toBeGreaterThan(0)
-    } finally {
-      deleteSpy.mockRestore()
-    }
+    expect(editor.state.currentPageId).toBe(pageC)
 
-    expect(editor.graph.getNode(pageB)).toBeUndefined()
-    expect(editor.graph.getNode(pageA)).toBeDefined()
+    // Delete the first (non-current) page.
+    editor.deletePage(initialPageId)
+
+    // Current page must stay on C, not switch to the remaining sibling.
+    expect(editor.state.currentPageId).toBe(pageC)
   })
 })
