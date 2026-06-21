@@ -1,0 +1,9 @@
+{
+  "name": "@open-pencil/tauri-config-check",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test tests/",
+    "check": "bun src/check.ts"
+  }
+}
