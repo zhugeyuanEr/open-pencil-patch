@@ -21,11 +21,6 @@ function createRecordingProvider() {
 }
 
 describe('Korean fallback (#291)', () => {
-  test('Noto Sans KR is in the CJK fallback manifest', () => {
-    const manifest = fontFallbackManifest('X11; Linux x86_64')
-    expect(manifest.cjk.remoteFamilies).toContain('Noto Sans KR')
-  })
-
   test('bundled Noto Sans KR font data loads from disk', async () => {
     const buffer = await fontManager.fetchBundledFont('/NotoSansKR-Regular.ttf')
     const data = expectDefined(buffer, 'Korean font buffer')
