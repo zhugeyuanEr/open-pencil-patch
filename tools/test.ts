@@ -17,10 +17,12 @@ async function run(command: string, args: string[], cwd: string): Promise<void> 
   })
 }
 
+const bunExecutable = process.versions.bun ? process.execPath : 'bun'
+
 for (const entry of await readdir('tools', { withFileTypes: true })) {
   if (!entry.isDirectory()) continue
 
   const cwd = join('tools', entry.name)
   const packageJSON = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8')) as PackageJSON
-  if (packageJSON.scripts?.test) await run('bun', ['test'], cwd)
+  if (packageJSON.scripts?.test) await run(bunExecutable, ['test'], cwd)
 }

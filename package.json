@@ -19,7 +19,7 @@
     "check": "bun run build:packages && bun run lint && tsgo --noEmit && bun run check:vue && bun run check:i18n && bun run check:packages && bun run check:arch && bun run test:type-shapes && bun run test:tools && bun run test:dupes",
     "check:i18n": "bun tools/i18n/src/check-locales.ts",
     "check:packages": "bun tools/package-quality/src/check-metadata.ts",
-    "check:arch": "steiger .",
+    "check:arch": "bunx --bun steiger .",
     "check:vue": "vue-tsc --noEmit -p tsconfig.json && vue-tsc --noEmit -p packages/vue/tsconfig.json",
     "test": "playwright test --project=openpencil",
     "test:update": "playwright test --project=openpencil --update-snapshots",
@@ -93,9 +93,6 @@
     "yoga-layout": "npm:@open-pencil/yoga-layout@3.3.0-grid.3",
     "zod": "^4.3.6"
   },
-  "overrides": {
-    "brace-expansion": "5.0.6"
-  },
   "devDependencies": {
     "@agentclientprotocol/sdk": "^0.14.1",
     "@feature-sliced/steiger-plugin": "^0.5.8",
@@ -133,5 +130,8 @@
     "vue-tsc": "^3.2.5",
     "workbox-window": "^7.4.0",
     "ws": "^8.19.0"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.6"
   }
 }

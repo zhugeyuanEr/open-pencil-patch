@@ -182,9 +182,7 @@ function onMenuClick(action: 'rename' | 'delete') {
                   : 'bg-transparent text-muted hover:bg-hover hover:text-surface'
               "
               @click="actions.switch(pg.id)"
-              @contextmenu="
-                (e) => openMenu(pg, e, list.length > 1, actions.rename, actions.delete)
-              "
+              @contextmenu="(e) => openMenu(pg, e, list.length > 1, actions.rename, actions.delete)"
               @dblclick="handlePageDblClick(pg, actions.rename, actions.delete)"
             >
               <icon-lucide-file class="size-3 shrink-0" />

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Fixes
+
+- Fix Figma clipboard fidelity: auto-layout frames with equal padding on
+  all four sides now emit a single `stackPadding` aggregate instead of the
+  redundant four-value padding fields, matching Figma's expected schema.
+- Fix text `maxLines` and `textTruncation` not preserved on Figma clipboard
+  copy — both fields are now serialized on the text NodeChange so truncated
+  single/multi-line text round-trips into Figma intact.
+- Fix font `fontDigest` always undefined on Figma clipboard copy. The digest
+  map was keyed by raw family name while the serializer looked up by the
+  normalized family name, so Figma could never match the font and always
+  fell back to a default. The digest map now uses the normalized family as
+  the key, tries the normalized and raw variants in the font cache, and
+  triggers a load on demand so fonts referenced before first render also
+  resolve.
+
 ## 0.13.3 — 2026-06-15
 
 ### Added

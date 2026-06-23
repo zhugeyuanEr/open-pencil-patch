@@ -329,6 +329,8 @@ function serializeTextProps(
   if (node.textDecorationFills.length > 0) {
     nc.textDecorationFillPaints = node.textDecorationFills.map(fillToKiwiPaint)
   }
+  if (node.maxLines != null && node.maxLines > 0) nc.maxLines = node.maxLines
+  if (node.textTruncation === 'ENDING') nc.textTruncation = 'ENDING'
 }
 
 function normalizeStackMode(value: string | undefined): KiwiNodeChange['stackMode'] {
@@ -384,10 +386,18 @@ function serializeLayoutProps(node: SceneNode, nc: KiwiNodeChange): void {
   if (node.layoutMode !== 'NONE' && node.layoutMode !== 'GRID') {
     nc.stackMode = node.layoutMode
     nc.stackSpacing = node.itemSpacing
-    nc.stackVerticalPadding = node.paddingTop
-    nc.stackHorizontalPadding = node.paddingLeft
-    nc.stackPaddingBottom = node.paddingBottom
-    nc.stackPaddingRight = node.paddingRight
+    if (
+      node.paddingTop === node.paddingRight &&
+      node.paddingRight === node.paddingBottom &&
+      node.paddingBottom === node.paddingLeft
+    ) {
+      nc.stackPadding = node.paddingTop
+    } else {
+      nc.stackVerticalPadding = node.paddingTop
+      nc.stackHorizontalPadding = node.paddingLeft
+      nc.stackPaddingBottom = node.paddingBottom
+      nc.stackPaddingRight = node.paddingRight
+    }
     nc.stackPrimarySizing = node.primaryAxisSizing === 'HUG' ? 'RESIZE_TO_FIT' : 'FIXED'
     nc.stackCounterSizing = node.counterAxisSizing === 'HUG' ? 'RESIZE_TO_FIT' : 'FIXED'
     nc.stackPrimaryAlignItems = normalizeStackJustify(node.primaryAxisAlign)

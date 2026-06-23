@@ -17,6 +17,18 @@ describe('Figma boolean operation export', () => {
     expect(changes[0].booleanOperation).toBe('INTERSECT')
   })
 
+  test('maps scene graph exclude to Kiwi XOR', () => {
+    const graph = new SceneGraph()
+    const page = graph.getPages()[0]
+    const node = graph.createNode('BOOLEAN_OPERATION', page.id, {
+      booleanOperation: 'EXCLUDE'
+    })
+
+    const changes = sceneNodeToKiwi(node, { sessionID: 1, localID: 1 }, 0, { value: 2 }, graph, [])
+
+    expect(changes[0].booleanOperation).toBe('XOR')
+  })
+
   test('exports boolean operation children in order', () => {
     const graph = new SceneGraph()
     const page = graph.getPages()[0]
