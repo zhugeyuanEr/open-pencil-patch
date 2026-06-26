@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.4 — 2026-06-27
 
 ### Fixes
 
@@ -17,6 +17,39 @@
   the key, tries the normalized and raw variants in the font cache, and
   triggers a load on demand so fonts referenced before first render also
   resolve.
+- Fix Korean glyphs rendering as tofu on cold start. Bundle `Noto Sans KR`
+  in `BUNDLED_FONTS` so the Korean fallback chain resolves offline, the
+  same way `Noto Sans SC` does for Chinese. Without the bundled asset the
+  cold-start chain fell through to Google Fonts and silently dropped
+  Korean glyphs when offline.
+- Fix `.fig` GUID collisions on incremental writes. The writer minted new
+  node GUIDs in `sessionID: 1` but the high-water-mark scan only inspected
+  `sessionID: 0` nodes, so on incremental edits new nodes silently
+  overwrote imported `sessionID: 1` content via last-write-wins GUID
+  resolution. The scan now advances the counter across both sessions.
+- Fix Windows desktop builds silently breaking the Layers panel reorder.
+  Tauri 2's `dragDropEnabled` defaults to `true` on the webview, which on
+  WebView2 intercepts `dragstart` / `dragover` / `drop` events before
+  `pragmatic-drag-and-drop` can observe them. Disable it explicitly; the
+  project does not use Tauri's `drag-drop` bridge, so HTML5 DnD is the
+  only consumer. A static guard (`tools/tauri-config-check`) now fails
+  the build if the flag is removed or flipped back.
+
+### Tests
+
+- Add regression coverage for the layer rename focus fix: a Playwright
+  e2e test asserts `document.activeElement` lands on the rename input
+  after double-click, and another transfers focus to a freshly-opened
+  rename input on a different row.
+- Extract `pickInput` (the templateRef unwrap helper from `LayerTree.vue`)
+  into `packages/vue/src/editor/inline-rename/resolve-ref.ts` and add
+  five unit tests covering single-element, non-empty array, empty array,
+  null, and single-element-array branches.
+- Anchor the GUID-collision high-water-mark test constants
+  (`seedHighLocalId`, `expectedMintedMinLocalId`) with an explicit
+  reference to `localIdCounter.value` so future contributors raising
+  the counter's initial value above 5003 do not silently break the
+  assertion.
 
 ## 0.13.3 — 2026-06-15
 
