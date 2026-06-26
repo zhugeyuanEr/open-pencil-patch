@@ -239,17 +239,26 @@ describe('GUID collision regression (#349)', () => {
   })
 
   test('high-water-mark scan advances past sessionID:1 localIDs', async () => {
+    // Anchor the high-water mark well above any default counter value so
+    // the regression is meaningful. Adjust both bounds in lockstep if the
+    // writer's localIdCounter initial value ever rises above 5003 — see
+    // `localIdCounter.value` in packages/core/src/io/formats/fig/export.ts.
+    const seedHighLocalId = 5000
+    const seedCount = 3
+    const expectedMintedMinLocalId = seedHighLocalId + seedCount - 1
+
     const graph = new SceneGraph()
     const page = graph.getPages()[0]
 
     // Plant three nodes deep into sessionID: 1 with high localIDs.
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < seedCount; i++) {
       const n = graph.createNode('FRAME', page.id, { name: `hi${i}` })
-      n.source.id = `1:${5000 + i}`
+      n.source.id = `1:${seedHighLocalId + i}`
     }
 
     // Add a fresh node WITHOUT source.id — the writer must mint it at
-    // a localID that clears the high-water mark, never below 5003.
+    // a localID that clears the high-water mark, never below
+    // expectedMintedMinLocalId.
     graph.createNode('FRAME', page.id, { name: 'minted' })
 
     const exported = await exportFigFile(graph)
@@ -261,14 +270,14 @@ describe('GUID collision regression (#349)', () => {
     expect(minted?.source.id).toBeTruthy()
     const [sessionStr, localStr] = (minted?.source.id ?? '').split(':')
     expect(Number.parseInt(sessionStr, 10)).toBe(1)
-    expect(Number.parseInt(localStr, 10)).toBeGreaterThan(5002)
+    expect(Number.parseInt(localStr, 10)).toBeGreaterThan(expectedMintedMinLocalId)
 
     // Original high GUIDs must also survive.
     const seedGuids = [...reimported.nodes.values()]
       .map((n) => n.source.id)
       .filter((id): id is string => id !== null)
-    expect(seedGuids).toContain('1:5000')
-    expect(seedGuids).toContain('1:5001')
-    expect(seedGuids).toContain('1:5002')
+    for (let i = 0; i < seedCount; i++) {
+      expect(seedGuids).toContain(`1:${seedHighLocalId + i}`)
+    }
   })
 })
