@@ -5,10 +5,15 @@ const BUNDLED_FONTS: Record<string, string> = {
   'Inter|Bold': '/Inter-Bold.ttf',
   'Inter|ExtraBold': '/Inter-ExtraBold.ttf',
   'Noto Naskh Arabic|Regular': '/NotoNaskhArabic-Regular.ttf',
-  'Noto Sans SC|Regular': '/NotoSansSC-Regular.ttf'
+  'Noto Sans SC|Regular': '/NotoSansSC-Regular.ttf',
+  'Noto Sans KR|Regular': '/NotoSansKR-Regular.ttf'
 }
 
-const BUNDLED_REGULAR_STYLE_FALLBACK_FAMILIES = new Set(['Noto Naskh Arabic', 'Noto Sans SC'])
+const BUNDLED_REGULAR_STYLE_FALLBACK_FAMILIES = new Set([
+  'Noto Naskh Arabic',
+  'Noto Sans SC',
+  'Noto Sans KR'
+])
 
 export function bundledFontUrl(family: string, style: string): string | undefined {
   const exact = BUNDLED_FONTS[`${family}|${style}`]
