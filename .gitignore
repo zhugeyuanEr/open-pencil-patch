@@ -34,7 +34,6 @@ public/canvaskit-webgpu/
 test-results/
 # Git worktrees for parallel agent work
 .worktrees/
-.claude/
 .env
 packages/docs/.vitepress/cache/
 packages/docs/.vitepress/dist/
