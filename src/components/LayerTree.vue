@@ -6,7 +6,6 @@ import { TreeItem, ContextMenuRoot, ContextMenuTrigger, ContextMenuPortal } from
 import { LayerTreeRoot, LayerTreeItem, useI18n, useInlineRename } from '@open-pencil/vue'
 import { useEditorStore } from '@/app/editor/active-store'
 import { nodeIcon, COMPONENT_TYPES } from '@/app/editor/icons'
-import { pickInput } from '#vue/editor/inline-rename/resolve-ref'
 import CanvasMenu from './CanvasMenu.vue'
 import Tip from './ui/Tip.vue'
 
@@ -18,6 +17,11 @@ const store = useEditorStore()
 const renameInput = templateRef<HTMLInputElement | HTMLInputElement[]>('renameInput')
 const rename = useInlineRename((id, name) => store.renameNode(id, name))
 const { menu: t } = useI18n()
+
+function pickInput(ref: HTMLInputElement | HTMLInputElement[] | null): HTMLInputElement | null {
+  if (!ref) return null
+  return Array.isArray(ref) ? (ref[0] ?? null) : ref
+}
 
 watch(renameInput, (ref) => {
   const input = pickInput(ref)
