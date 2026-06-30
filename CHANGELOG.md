@@ -17,6 +17,15 @@
   the key, tries the normalized and raw variants in the font cache, and
   triggers a load on demand so fonts referenced before first render also
   resolve.
+- Fix CJK/Arabic text rendering as tofu on the first frame after opening
+  a `.fig` file. The renderer no longer falls back to `r.textFont` (Inter)
+  when `fontsLoaded` is false, the render loop now waits for `fontsLoaded`
+  (with a 5s timeout escape hatch), `openFigFile` and `openFileInNewTab`
+  call `ensureGraphFonts` to preload the document's text fonts and clear
+  stale `textPicture` snapshots, and the CJK/Arabic fallback callback
+  always fires so the canvas is re-painted even when the fallback never
+  loaded (in which case a soft placeholder rectangle is shown instead of
+  tofu).
 
 ## 0.13.3 — 2026-06-15
 

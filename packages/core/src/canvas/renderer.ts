@@ -77,6 +77,7 @@ export class SkiaRenderer {
   fontMgr: FontMgr | null = null
   fontProvider: TypefaceFontProvider | null = null
   fontsLoaded = false
+  fontsLoadFailed = false
   imageCache = new Map<string, CKImage>()
   vectorPathCache = new Map<string, Path[]>()
   vectorStrokePathCache = new Map<string, Path[]>()
@@ -660,8 +661,8 @@ export class SkiaRenderer {
 
   destroyed: boolean = false
 
-  destroy(): void {
-    destroyRenderer(this)
+  destroy(options: { resetFonts?: boolean } = {}): void {
+    destroyRenderer(this, options)
   }
 }
 

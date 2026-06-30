@@ -6,6 +6,7 @@ import { yieldToUI } from '@/app/document/io/browser'
 import { applyImportedDocument } from '@/app/document/io/imported-document'
 import { readReloadSource } from '@/app/document/io/reload-source'
 import { captureReloadState, restoreReloadState } from '@/app/document/io/reload-state'
+import { ensureGraphFonts } from '@/app/editor/fonts'
 import { toast } from '@/app/shell/ui'
 
 type OpenDocumentState = EditorState & {
@@ -48,6 +49,14 @@ export function createOpenActions({
       const imported = await readFigFile(file, { populate: 'first-page' })
       await yieldToUI()
       await applyImportedDocument(editor, imported)
+      // Preload every text font referenced by the imported graph so the first
+      // post-open render does not fall back to Inter (which has no CJK
+      // glyphs and produced tofu on the first frame). Scans every page, not
+      // just the first one, to keep multi-page .fig files in sync.
+      await ensureGraphFonts(
+        imported,
+        imported.getPages().flatMap((p) => p.childIds)
+      )
       state.documentName = file.name.replace(/\.fig$/i, '')
       setDocumentSource(file.name, 'fig', handle, path)
       await fitCurrentPageToViewport()

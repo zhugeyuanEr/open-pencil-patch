@@ -343,6 +343,22 @@ export class FontManager {
     return this.cjkFallbackFamilies
   }
 
+  // Test-only / lifecycle escape hatch. Clears every cached font state so a
+  // fresh load cycle can be observed deterministically. Never call this from
+  // the hot render path: it nukes the fontProvider registrations.
+  reset(): void {
+    this.loadedFamilies.clear()
+    this.registeredRenderFamilies.clear()
+    this.cjkFallbackFamilies = []
+    this.cjkFallbackPromise = null
+    this.arabicFallbackFamilies = []
+    this.arabicFallbackPromise = null
+    this.googleFontsCache.clear()
+    this.googleFontsFailed.clear()
+    this.googleFamiliesCache = null
+    this.googleFamiliesPromise = null
+  }
+
   setCJKFallbackFamily(family: string): void {
     if (!this.cjkFallbackFamilies.includes(family)) {
       this.cjkFallbackFamilies.push(family)

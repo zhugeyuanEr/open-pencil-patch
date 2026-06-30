@@ -4,6 +4,7 @@ import type { Font, Paint, Surface } from 'canvaskit-wasm'
 
 import type { SkiaRenderer } from '#core/canvas/renderer'
 import { destroyRenderer } from '#core/canvas/renderer/lifecycle'
+import { fontManager } from '#core/text/fonts'
 
 function deletable<T>() {
   return { delete: mock() } as T & { delete: ReturnType<typeof mock> }
@@ -71,4 +72,23 @@ test('destroyRenderer deletes all renderer-owned paints and label fonts', () => 
   expect(parentOutlinePaint.delete).toHaveBeenCalled()
   expect(sectionTitleFont?.delete).toHaveBeenCalled()
   expect(componentLabelFont?.delete).toHaveBeenCalled()
+})
+
+test('destroyRenderer with resetFonts clears the module-level font manager', () => {
+  fontManager.markLoaded('Inter', 'Regular', new ArrayBuffer(8))
+  fontManager.setCJKFallbackFamily('Noto Sans SC')
+  expect(fontManager.isStyleLoaded('Inter', 'Regular')).toBe(true)
+  expect(fontManager.getCJKFallbackFamilies()).toContain('Noto Sans SC')
+
+  try {
+    const renderer = createRenderer()
+    destroyRenderer(renderer, { resetFonts: true })
+
+    expect(fontManager.isStyleLoaded('Inter', 'Regular')).toBe(false)
+    expect(fontManager.getCJKFallbackFamilies()).toEqual([])
+  } finally {
+    // Defensive: keep the module singleton clean for the next test even if
+    // the assertion above didn't fire (e.g. throws earlier).
+    fontManager.reset()
+  }
 })

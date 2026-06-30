@@ -51,11 +51,13 @@ export async function loadFonts(
   }
 
   r.fontsLoaded = true
+  // Whether the bundled/remote CJK or Arabic fallback actually registered
+  // decides if a script fallback exists in the provider. Used by `renderText`
+  // to draw an honest placeholder instead of silently leaving CJK/Arabic
+  // text invisible.
+  r.fontsLoadFailed = fallbackFamilies.cjk.length === 0 && fallbackFamilies.arabic.length === 0
   r.invalidateAllPictures()
-
-  if (fallbackFamilies.cjk.length > 0 || fallbackFamilies.arabic.length > 0) {
-    onFallbackFontsLoaded?.()
-  }
+  onFallbackFontsLoaded?.()
 }
 
 export async function prepareForExport(

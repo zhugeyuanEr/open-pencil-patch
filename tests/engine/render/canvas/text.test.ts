@@ -64,6 +64,7 @@ function createMockRenderer(overrides: Partial<Record<string, unknown>> = {}) {
     textFont: {},
     fillPaint: {
       getColor: () => new Float32Array([0, 0, 0, 1]),
+      setColor: mock(() => undefined),
       setAntiAlias: mock(() => undefined)
     },
     effectLayerPaint: {
@@ -71,6 +72,7 @@ function createMockRenderer(overrides: Partial<Record<string, unknown>> = {}) {
       setColorFilter: mock(() => undefined),
       setImageFilter: mock(() => undefined)
     },
+    fontsLoadFailed: false,
     ck: {
       MakePicture: mock(() => createMockPicture()),
       Path: class {
@@ -246,14 +248,41 @@ describe('renderText', () => {
     }
   })
 
-  test('falls back to drawText only when fonts are NOT loaded', () => {
+  test('does not draw tofu while fonts are still loading (no drawText fallback)', () => {
+    // The historical fallback drew CJK/Arabic text with the default Inter
+    // typeface via `canvas.drawText`, producing tofu. The renderer now skips
+    // drawing text until `fontsLoaded` is true so the first post-mount frame
+    // can never show tofu.
     const r = createMockRenderer({ fontsLoaded: false, fontProvider: null })
     const canvas = createMockCanvas()
 
-    renderText(r, canvas as never, textNode())
+    renderText(r, canvas as never, textNode({ text: '上班打卡' }))
 
-    expect(canvas.drawText).toHaveBeenCalledTimes(1)
+    expect(canvas.drawText).not.toHaveBeenCalled()
     expect(r.buildParagraph).not.toHaveBeenCalled()
+    expect(canvas.drawRect).not.toHaveBeenCalled()
+  })
+
+  test('draws a soft placeholder when fontsLoadFailed is set and text needs CJK/Arabic', () => {
+    const r = createMockRenderer({ fontsLoaded: false, fontProvider: null, fontsLoadFailed: true })
+    const canvas = createMockCanvas()
+
+    renderText(r, canvas as never, textNode({ text: '上班打卡', width: 200, height: 40 }))
+
+    expect(canvas.drawText).not.toHaveBeenCalled()
+    expect(r.buildParagraph).not.toHaveBeenCalled()
+    expect(canvas.drawRect).toHaveBeenCalledTimes(1)
+  })
+
+  test('stays silent when fontsLoadFailed is set but text is Latin-only', () => {
+    const r = createMockRenderer({ fontsLoaded: false, fontProvider: null, fontsLoadFailed: true })
+    const canvas = createMockCanvas()
+
+    renderText(r, canvas as never, textNode({ text: 'Hello world' }))
+
+    expect(canvas.drawText).not.toHaveBeenCalled()
+    expect(r.buildParagraph).not.toHaveBeenCalled()
+    expect(canvas.drawRect).not.toHaveBeenCalled()
   })
 
   test('does nothing for empty text', () => {

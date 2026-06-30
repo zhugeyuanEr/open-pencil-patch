@@ -97,7 +97,10 @@ export function createCanvasSurfaceManager({
     }
   }
 
-  const renderLoop = createCanvasRenderLoop(editor, renderNow, { layer: options?.layer })
+  const renderLoop = createCanvasRenderLoop(editor, renderNow, {
+    layer: options?.layer,
+    getRenderer: () => state.renderer
+  })
 
   function resizeCanvas(canvas: HTMLCanvasElement) {
     const ck = getCanvasKit()
@@ -124,7 +127,7 @@ export function createCanvasSurfaceManager({
     clearSceneBackingRenderTimer()
     renderLoop.pause()
     if (state.renderer) editor.removeCanvasRenderer(state.renderer)
-    state.renderer?.destroy()
+    state.renderer?.destroy({ resetFonts: true })
     state.glContext?.delete()
   }
 

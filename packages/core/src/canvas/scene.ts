@@ -639,6 +639,20 @@ function drawGradientText(
 
 const CJK_TEXT_RE = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/u
 
+const ARABIC_TEXT_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/u
+
+function textNeedsScriptFallback(text: string): boolean {
+  return CJK_TEXT_RE.test(text) || ARABIC_TEXT_RE.test(text)
+}
+
+function drawFallbackPlaceholder(r: SkiaRenderer, canvas: Canvas, node: SceneNode): void {
+  const fallbackSize = node.fontSize || r.DEFAULT_FONT_SIZE
+  const w = node.width || fallbackSize * 4
+  const h = node.height || fallbackSize * 1.4
+  r.fillPaint.setColor(r.ck.Color4f(0.85, 0.85, 0.85, 0.6))
+  canvas.drawRect(r.ck.LTRBRect(0, 0, w, h), r.fillPaint)
+}
+
 function shouldDrawFigmaDerivedText(node: SceneNode): boolean {
   if (CJK_TEXT_RE.test(node.text) && fontManager.getCJKFallbackFamilies().length > 0) {
     return false
@@ -671,7 +685,15 @@ export function renderText(r: SkiaRenderer, canvas: Canvas, node: SceneNode, fil
     return
   }
 
-  if (!r.isNodeFontLoaded(node)) {
+  if (!r.fontsLoaded || !r.fontProvider || !r.isNodeFontLoaded(node)) {
+    // Fonts are not yet ready (or the required script fallback never loaded).
+    // Skip drawing text entirely instead of falling back to `r.textFont` (Inter),
+    // which has no CJK/Arabic glyphs and would render as tofu. When the load
+    // is known to have failed, draw a soft placeholder so the user is not
+    // misled into thinking the text is just empty.
+    if (r.fontsLoadFailed && textNeedsScriptFallback(text)) {
+      drawFallbackPlaceholder(r, canvas, node)
+    }
     canvas.restore()
     return
   }
@@ -683,13 +705,9 @@ export function renderText(r: SkiaRenderer, canvas: Canvas, node: SceneNode, fil
     canvas.restore()
     return
   }
-  if (r.fontsLoaded && r.fontProvider) {
-    const paragraph = r.buildParagraph(node, r.fillPaint.getColor())
-    canvas.drawParagraph(paragraph, 0, paragraphY)
-    paragraph.delete()
-  } else if (r.textFont) {
-    canvas.drawText(text, 0, node.fontSize || r.DEFAULT_FONT_SIZE, r.fillPaint, r.textFont)
-  }
+  const paragraph = r.buildParagraph(node, r.fillPaint.getColor())
+  canvas.drawParagraph(paragraph, 0, paragraphY)
+  paragraph.delete()
 
   canvas.restore()
 }
