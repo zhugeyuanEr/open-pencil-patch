@@ -2,13 +2,25 @@ import { shallowRef, computed, triggerRef } from 'vue'
 
 import { BUILTIN_IO_FORMATS, IORegistry } from '@open-pencil/core/io'
 import { readFigFile } from '@open-pencil/core/io/formats/fig'
-import { computeAllLayouts } from '@open-pencil/core/layout'
 import type { SceneGraph } from '@open-pencil/core/scene-graph'
 
 import { setOpenPencilStore } from '@/app/browser-bridge'
 import { setActiveEditorStore } from '@/app/editor/active-store'
 import { createEditorStore } from '@/app/editor/session'
+import { applyImportedDocument } from '@/app/document/io/imported-document'
 import type { EditorStore } from '@/app/editor/session'
+
+type CreateStoreFn = (tabId: string, initialGraph?: SceneGraph) => EditorStore
+
+// Default factory is the real store creator. Tests and alternative
+// frontends (mobile, automation bridge) call createTab() without
+// registering a factory, so we cannot throw when none is set.
+let createStoreFn: CreateStoreFn = (tabId, initialGraph) =>
+  createEditorStore(initialGraph, { tabId })
+
+export function registerStoreFactory(fn: CreateStoreFn): void {
+  createStoreFn = fn
+}
 
 export interface Tab {
   id: string
@@ -43,8 +55,10 @@ export function getActiveStore(): EditorStore {
 }
 
 export function createTab(store?: EditorStore, initialGraph?: SceneGraph): Tab {
-  const s = store ?? createEditorStore(initialGraph)
-  const tab: Tab = { id: generateTabId(), store: s }
+  const id = generateTabId()
+  const tab: Tab = store
+    ? { id, store }
+    : { id, store: createStoreFn(id, initialGraph) }
   tabsRef.value = [...tabsRef.value, tab]
   activateTab(tab)
   return tab
@@ -116,14 +130,9 @@ export async function openFileInNewTab(
           data: new Uint8Array(await file.arrayBuffer())
         })
 
-    const firstPageId = imported.getPages()[0]?.id
-    if (firstPageId) computeAllLayouts(imported, firstPageId)
-    store.replaceGraph(imported)
-    store.undo.clear()
+    await applyImportedDocument(store, imported)
     store.setDocumentSource(file.name, sourceFormat, handle, path)
     store.clearSelection()
-    const pageId = store.graph.getPages()[0]?.id ?? store.graph.rootId
-    await store.switchPage(pageId)
     await store.fitCurrentPageToViewport()
   } finally {
     store.state.loading = false

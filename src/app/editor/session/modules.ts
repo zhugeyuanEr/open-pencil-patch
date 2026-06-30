@@ -4,8 +4,10 @@ import type { Editor } from '@open-pencil/core/editor'
 import type { IORegistry } from '@open-pencil/core/io'
 import type { SceneGraph } from '@open-pencil/core/scene-graph'
 
+import { docKeyForTab } from '@/app/ai/chat/persistence'
 import { createDocumentExportActions } from '@/app/document/export'
 import { createDocumentIOActions } from '@/app/document/io'
+import { applyImportedDocument } from '@/app/document/io/imported-document'
 import type { ViewportSize } from '@/app/document/io/types'
 import { createFlashActions } from '@/app/editor/flash'
 import { createMobileClipboardActions } from '@/app/editor/mobile-clipboard'
@@ -54,12 +56,15 @@ export function createEditorStoreModules(
   graph: SceneGraph,
   state: AppEditorState,
   io: IORegistry,
-  viewportSize: ViewportSize
+  viewportSize: ViewportSize,
+  options: { tabId: string } = { tabId: '' }
 ) {
   const flash = createFlashActions(editor, state)
   const pen = createPenActions(editor, graph, state)
   const vectorEdit = createVectorEditActions(editor, graph, state)
-  const documentIO = createDocumentIOActions(editor, state, viewportSize)
+  const documentIO = createDocumentIOActions(editor, state, viewportSize, () =>
+    docKeyForTab(options.tabId, undefined, state.documentName)
+  )
   const documentExport = createDocumentExportActions(editor, state, io, documentIO.downloadBlob)
   const mobileClipboard = createMobileClipboardActions(editor, state)
   const profiler = createProfilerActions(editor)
@@ -77,6 +82,10 @@ export function createEditorStoreModules(
     setDocumentSource: documentIO.setDocumentSource,
     setPlannedFilePath: documentIO.setPlannedFilePath,
     startWatchingCurrentFile: documentIO.startWatchingCurrentFile,
+    writeRecoverySnapshot: documentIO.writeRecoverySnapshot,
+    readRecoverySnapshot: documentIO.readRecoverySnapshot,
+    clearRecoverySnapshot: documentIO.clearRecoverySnapshot,
+    applyImportedDocument: (imported: SceneGraph) => applyImportedDocument(editor, imported),
     dispose: documentIO.disposeDocumentIO,
     ...documentExport,
     ...mobileClipboard,

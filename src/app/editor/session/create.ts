@@ -20,7 +20,7 @@ import { createInitialAppEditorState, type AppEditorState } from '@/app/editor/s
 export { EDITOR_TOOLS as TOOLS, TOOL_SHORTCUTS } from '@open-pencil/core/editor'
 export type { EditorToolDef as ToolDef, Tool } from '@open-pencil/core/editor'
 
-export function createEditorStore(initialGraph?: SceneGraph) {
+export function createEditorStore(initialGraph?: SceneGraph, options?: { tabId?: string }) {
   const graph = initialGraph ?? new SceneGraph()
 
   const state = shallowReactive<AppEditorState>(createInitialAppEditorState(graph.getPages()[0].id))
@@ -44,7 +44,9 @@ export function createEditorStore(initialGraph?: SceneGraph) {
 
   const { selectedNodes, selectedNode, layerTree } = createEditorComputedRefs(editor, state)
 
-  const modules = createEditorStoreModules(editor, graph, state, io, viewportSize)
+  const modules = createEditorStoreModules(editor, graph, state, io, viewportSize, {
+    tabId: options?.tabId ?? ''
+  })
 
   // ─── Public API ───────────────────────────────────────────────
   // Spread all core Editor methods, then override getters and add app-specific.

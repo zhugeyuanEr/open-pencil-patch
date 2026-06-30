@@ -7,6 +7,7 @@ import {
   downloadNameFromPath,
   figDownloadName
 } from '@/app/document/io/names'
+import { createRecoveryActions } from '@/app/document/recovery'
 import { createSaveActions } from '@/app/document/io/save'
 import { createDocumentSourceState } from '@/app/document/io/source-state'
 
@@ -33,6 +34,7 @@ type DocumentSourceOptions = {
   setSavedVersion: (version: number) => void
   setLastWriteTime: (time: number) => void
   getRenderer: () => Editor['renderer']
+  getDocKey: () => string
 }
 
 export function createDocumentSourceActions({
@@ -49,7 +51,8 @@ export function createDocumentSourceActions({
   getSavedVersion,
   setSavedVersion,
   setLastWriteTime,
-  getRenderer
+  getRenderer,
+  getDocKey
 }: DocumentSourceOptions) {
   function buildFigFile() {
     return exportFigFile(editor.graph, undefined, getRenderer() ?? undefined, state.currentPageId)
@@ -71,15 +74,33 @@ export function createDocumentSourceActions({
     }
   })
 
+  const hasWritableSource = () => !!getFileHandle() || !!getFilePath()
+
   const { disposeAutosave } = createAutosave({
     state,
     getSavedVersion,
-    hasWritableSource: () => !!getFileHandle() || !!getFilePath(),
+    hasWritableSource,
     saveCurrentDocument: async () => writeFile(await buildFigFile())
+  })
+
+  const recovery = createRecoveryActions({
+    hasWritableSource,
+    buildFigFile,
+    getDocKey
   })
 
   function markDocumentSourceChanged() {
     state.documentSourceVersion += 1
+  }
+
+  // Serial cleanup chain — multiple rapid `setDocumentSource` calls
+  // (e.g. opening file A then file B in quick succession) chain their
+  // IDB deletes instead of firing them in parallel and clobbering each
+  // other's in-flight writes. Errors are swallowed inside the recovery
+  // layer; the chain itself never rejects.
+  let cleanupChain: Promise<void> = Promise.resolve()
+  function queueClearRecovery() {
+    cleanupChain = cleanupChain.then(() => recovery.clearRecoverySnapshot())
   }
 
   function setDocumentSource(
@@ -98,6 +119,7 @@ export function createDocumentSourceActions({
     if (isFig && (handle || path)) {
       void startWatchingFile()
     }
+    queueClearRecovery()
   }
 
   function setPlannedFilePath(path: string) {
@@ -117,6 +139,27 @@ export function createDocumentSourceActions({
   function disposeDocumentIO() {
     stopWatchingFile()
     disposeAutosave()
+    recovery.dispose()
+  }
+
+  // Snapshot cleanup runs in `finally` so a partial failure during save
+  // (e.g. Tauri permission error after the bytes hit disk) still drops the
+  // recovery entry — otherwise the next launch would offer to "restore" a
+  // state the user has already overwritten on disk.
+  async function saveFigFileWithCleanup() {
+    try {
+      await saveFigFile()
+    } finally {
+      void recovery.clearRecoverySnapshot()
+    }
+  }
+
+  async function saveFigFileAsWithCleanup() {
+    try {
+      await saveFigFileAs()
+    } finally {
+      void recovery.clearRecoverySnapshot()
+    }
   }
 
   return {
@@ -124,7 +167,8 @@ export function createDocumentSourceActions({
     setPlannedFilePath,
     startWatchingCurrentFile,
     disposeDocumentIO,
-    saveFigFile,
-    saveFigFileAs
+    saveFigFile: saveFigFileWithCleanup,
+    saveFigFileAs: saveFigFileAsWithCleanup,
+    ...recovery
   }
 }

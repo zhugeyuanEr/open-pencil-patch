@@ -13,6 +13,9 @@ export function createInitialAppEditorState(pageId: string): AppEditorState {
     actionToast: null,
     mobileDrawerSnap: 'closed',
     clipboardHtml: '',
+    // Default false: createAutosave early-returns when hasWritableSource() is false
+    // (i.e. the document is "Untitled" with no file handle/path), so flipping this
+    // to true has no observable effect. Keep false so the intent matches reality.
     autosaveEnabled: false,
     documentSourceVersion: 0,
     cursorCanvasX: null,

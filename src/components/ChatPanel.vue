@@ -115,7 +115,10 @@ watch(
 )
 
 watch(isChatBusy, (busy, wasBusy) => {
-  if (!busy && wasBusy) flushCurrentChat()
+  if (!busy && wasBusy) {
+    flushCurrentChat()
+    void editorStore.writeRecoverySnapshot()
+  }
 })
 
 function flushCurrentChat() {

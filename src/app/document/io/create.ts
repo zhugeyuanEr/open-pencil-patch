@@ -17,7 +17,8 @@ type DocumentIOState = EditorState & {
 export function createDocumentIOActions(
   editor: Editor,
   state: DocumentIOState,
-  viewportSize: ViewportSize
+  viewportSize: ViewportSize,
+  getDocKey: () => string
 ) {
   const sourceState = createDocumentSourceState()
 
@@ -48,6 +49,7 @@ export function createDocumentIOActions(
     stopWatchingFile,
     startWatchingFile,
     getRenderer: () => editor.renderer,
+    getDocKey,
     ...sourceState
   })
   const { openFigFile } = createOpenActions({
@@ -68,6 +70,12 @@ export function createDocumentIOActions(
     disposeDocumentIO: sourceActions.disposeDocumentIO,
     openFigFile,
     saveFigFile: sourceActions.saveFigFile,
-    saveFigFileAs: sourceActions.saveFigFileAs
+    saveFigFileAs: sourceActions.saveFigFileAs,
+    // Recovery methods are bound through arrow wrappers so they keep their
+    // closure over the recovery actions even when destructured off the
+    // sourceActions object. Avoids unbound-method warnings.
+    writeRecoverySnapshot: () => sourceActions.writeRecoverySnapshot(),
+    readRecoverySnapshot: () => sourceActions.readRecoverySnapshot(),
+    clearRecoverySnapshot: () => sourceActions.clearRecoverySnapshot()
   }
 }

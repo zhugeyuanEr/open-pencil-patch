@@ -305,6 +305,53 @@ test('chat export menu copies and downloads markdown', async () => {
   }
 })
 
+test('Ctrl+S after AI completion clears the IDB recovery snapshot', async () => {
+  test.skip(USE_REAL_LLM, 'recovery snapshot E2E uses the mock chat transport')
+
+  await page.evaluate(async () => {
+    const idb = (await import('idb-keyval')) as { del: (k: string) => Promise<void> }
+    const keys: string[] = [
+      'doc-snapshot:fp:test',
+      'doc-snapshot:dn:test',
+      'doc-snapshot:tab:test',
+      // Belt-and-suspenders for legacy state from ≤ 0.13.x builds.
+      'ai-recovery:fp:test',
+      'ai-recovery:dn:test',
+      'ai-recovery:tab:test'
+    ]
+    for (const k of keys) await idb.del(k)
+  })
+
+  await sendChatMessage('Create a frame')
+
+  await page.waitForTimeout(1500)
+
+  const beforeSave = await page.evaluate(async () => {
+    const idb = (await import('idb-keyval')) as { keys: () => Promise<string[]> }
+    return (await idb.keys()).filter((k) => k.startsWith('doc-snapshot:') || k.startsWith('ai-recovery:'))
+  })
+  expect(beforeSave.length).toBeGreaterThan(0)
+
+  await page.evaluate(() => {
+    const mockWritable = {
+      write: async () => undefined,
+      close: async () => undefined
+    }
+    const mockHandle = {
+      createWritable: async () => mockWritable
+    }
+    window.showSaveFilePicker = async () => mockHandle as FileSystemFileHandle
+  })
+  await page.keyboard.press(`${modKey}+s`)
+  await page.waitForTimeout(500)
+
+  const afterSave = await page.evaluate(async () => {
+    const idb = (await import('idb-keyval')) as { keys: () => Promise<string[]> }
+    return (await idb.keys()).filter((k) => k.startsWith('doc-snapshot:') || k.startsWith('ai-recovery:'))
+  })
+  expect(afterSave).toHaveLength(0)
+})
+
 test('document tabs keep separate chat context', async () => {
   test.skip(USE_REAL_LLM, 'document persistence E2E uses the mock chat transport')
 

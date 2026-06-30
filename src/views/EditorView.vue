@@ -16,7 +16,7 @@ import { isTauri } from '@/app/tauri/env'
 import { appMenuShortcut } from '@/app/shell/menu/shortcut'
 import { createDemoShapes } from '@/app/demo/document'
 import { useEditorStore } from '@/app/editor/active-store'
-import { createTab, activeTab, getActiveStore, tabCount } from '@/app/tabs'
+import { activeTab, createTab, getActiveStore, tabCount } from '@/app/tabs'
 
 import CollabPanel from '@/components/CollabPanel/CollabPanel.vue'
 import EditorCanvas from '@/components/EditorCanvas.vue'
@@ -34,6 +34,8 @@ const params = useUrlSearchParams('history')
 const showChrome = !('no-chrome' in params)
 
 const createdInitialTab = tabCount() === 0
+// The default factory in src/app/tabs/index.ts already wires tabId through to
+// createEditorStore, so EditorView doesn't need to re-register it.
 const firstTab = createdInitialTab ? createTab() : (activeTab.value ?? createTab())
 const store = useEditorStore()
 const { dialogs } = useI18n()
