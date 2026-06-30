@@ -57,6 +57,10 @@ export function createOpenActions({
         imported,
         imported.getPages().flatMap((p) => p.childIds)
       )
+      // We accept the small loading-flag delay for large .fig files
+      // (`state.loading` stays on for the duration of the font load) instead
+      // of deferring to an idle frame: keeps `openFigFile` a single strictly
+      // awaited flow with no races against `reloadFromDisk` or AI tools.
       state.documentName = file.name.replace(/\.fig$/i, '')
       setDocumentSource(file.name, 'fig', handle, path)
       await fitCurrentPageToViewport()
@@ -92,6 +96,14 @@ export function createReloadActions({
     if (!imported) return
     const pageId = imported.getNode(snapshot.pageId) ? snapshot.pageId : imported.getPages()[0]?.id
     if (pageId) computeAllLayouts(imported, pageId)
+    // Same tofu-prevention contract as `openFigFile`: preload every text font
+    // referenced by the reloaded graph BEFORE `replaceGraph` so the first
+    // frame after the swap renders text instead of tofu. Reload does not
+    // flip `state.loading`, so we must await the load synchronously here —
+    // otherwise `editor.replaceGraph` schedules a render that sees missing
+    // fonts and the page would briefly show blank text rows until the next
+    // render trigger fires.
+    await ensureGraphFonts(imported, imported.getPages().flatMap((p) => p.childIds))
     editor.replaceGraph(imported)
 
     editor.undo.clear()
