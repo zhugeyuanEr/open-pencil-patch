@@ -246,6 +246,20 @@ export class FontManager {
     return [...byFamily.values()].sort((a, b) => a.family.localeCompare(b.family))
   }
 
+    /**
+   * Test-only / lifecycle escape hatch. Clears every cached font state so a
+   * fresh load cycle can be observed deterministically. Never call this
+   * from the hot render path: it nukes the fontProvider registrations.
+   */
+  reset(): void {
+    this.loadedFamilies.clear()
+    this.registeredRenderFamilies.clear()
+    this.cjkFallbackFamilies = []
+    this.cjkFallbackPromise = null
+    this.arabicFallbackFamilies = []
+    this.arabicFallbackPromise = null
+  }
+
   preloadWebFontFamilies(): void {
     this.webFonts.preloadFamilies()
   }
