@@ -1,8 +1,13 @@
 import type { SceneGraph } from '@open-pencil/scene-graph'
 
-import { fontManager, weightToStyle } from '#core/text/fonts'
+import { fontManager, normalizeFontFamily, weightToStyle } from '#core/text/fonts'
 
 const fontDigestCache = new Map<string, Uint8Array>()
+
+type FontDigestTarget = {
+  style: string
+  families: Set<string>
+}
 
 async function computeFontDigest(data: ArrayBuffer): Promise<Uint8Array> {
   if (typeof crypto !== 'undefined') {
@@ -12,11 +17,22 @@ async function computeFontDigest(data: ArrayBuffer): Promise<Uint8Array> {
   return new Uint8Array(20)
 }
 
+async function loadAnyFontData(family: string, style: string): Promise<ArrayBuffer | null> {
+  const normalized = normalizeFontFamily(family)
+  return (
+    fontManager.loadedData(family, style) ??
+    fontManager.loadedData(normalized, style) ??
+    (await fontManager.loadFont(family, style)) ??
+    (await fontManager.loadFont(normalized, style))
+  )
+}
+
 async function getFontDigest(family: string, style: string): Promise<Uint8Array | null> {
-  const key = `${family}|${style}`
+  const normalized = normalizeFontFamily(family)
+  const key = `${normalized}|${style}`
   const cached = fontDigestCache.get(key)
   if (cached) return cached
-  const data = fontManager.loadedData(family, style)
+  const data = await loadAnyFontData(family, style)
   if (!data) return null
   const digest = await computeFontDigest(data)
   fontDigestCache.set(key, digest)
@@ -24,23 +40,39 @@ async function getFontDigest(family: string, style: string): Promise<Uint8Array 
 }
 
 export async function buildFontDigestMap(graph: SceneGraph): Promise<Map<string, Uint8Array>> {
-  const fontKeys = new Set<string>()
+  const fontTargets = new Map<string, FontDigestTarget>()
+  const addFont = (family: string, style: string) => {
+    const normalized = normalizeFontFamily(family)
+    const key = `${normalized}|${style}`
+    const target = fontTargets.get(key)
+    if (target) {
+      target.families.add(family)
+      target.families.add(normalized)
+      return
+    }
+    fontTargets.set(key, {
+      style,
+      families: new Set([family, normalized])
+    })
+  }
   for (const node of graph.getAllNodes()) {
     if (node.type !== 'TEXT') continue
     const baseStyle = weightToStyle(node.fontWeight, node.italic)
-    fontKeys.add(`${node.fontFamily}|${baseStyle}`)
+    addFont(node.fontFamily, baseStyle)
     for (const run of node.styleRuns) {
       const family = run.style.fontFamily ?? node.fontFamily
       const weight = run.style.fontWeight ?? node.fontWeight
       const italic = run.style.italic ?? node.italic
-      fontKeys.add(`${family}|${weightToStyle(weight, italic)}`)
+      addFont(family, weightToStyle(weight, italic))
     }
   }
-
   const result = new Map<string, Uint8Array>()
-  for (const key of fontKeys) {
-    const [family, style] = key.split('|')
-    const digest = await getFontDigest(family, style)
+  for (const [key, target] of fontTargets) {
+    let digest: Uint8Array | null = null
+    for (const family of target.families) {
+      digest = await getFontDigest(family, target.style)
+      if (digest) break
+    }
     if (digest) result.set(key, digest)
   }
   return result
