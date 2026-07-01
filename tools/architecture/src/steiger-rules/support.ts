@@ -37,6 +37,7 @@ export const TEXT_EXTENSIONS = new Set(['.ts', '.tsx', '.vue', '.js', '.jsx', '.
 export const ROOT_MARKDOWN_ALLOWLIST = new Set([
   'AGENTS.md',
   'CHANGELOG.md',
+  'CLAUDE.md',
   'CONTRIBUTING.md',
   'README.md',
   'SECURITY.md'

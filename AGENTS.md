@@ -94,14 +94,14 @@ The app editor session (`src/app/editor/session/create.ts`) is a thin Vue wrappe
 
 ## Commands
 
-- `bun run check` — type-aware lint + typecheck via oxlint + tsgo + architecture checks (run before committing)
+- `bun run check` — full package build, type-aware lint, typecheck, architecture checks, and repo tooling checks. Heavy; use in CI or an explicit full validation pass.
 - `bun run check:arch` — Steiger architecture lint for project-specific import boundaries
 - `bun run check:vue` — vue-tsc type-check for .vue files (has pre-existing errors, fix progressively)
 - `bun run test:dupes` — jscpd copy-paste detection across product TS sources
 - `bun run test:tools` — tests for private repo tooling under `tools/*`
 - `bun run format` — oxfmt with import sorting
-- `bun test ./tests/engine` — unit tests
-- `bun run test` — Playwright visual regression
+- `bun test ./tests/engine` — full engine unit test suite. Heavy; prefer targeted test files during local AI work.
+- `bun run test` — Playwright visual regression. Starts a Vite web server and browser workers.
 - `bun run tauri dev` — desktop app with hot reload
 - `bun open-pencil info <file>` — document stats
 - `bun open-pencil tree <file>` — node tree
@@ -115,6 +115,27 @@ The app editor session (`src/app/editor/session/create.ts`) is a thin Vue wrappe
 - `bun open-pencil analyze spacing <file>` — gap/padding values
 - `bun open-pencil analyze clusters <file>` — repeated patterns
 - `bun open-pencil eval <file> --code '<js>'` — execute JS with Figma Plugin API
+
+### Local AI-agent safety
+
+On this Windows checkout, local Codex/Claude Code sessions have previously triggered system-wide virtual memory exhaustion by launching broad Bun/Node validation commands. AI agents must treat the following commands as opt-in only unless the user explicitly asks for a full validation or release build:
+
+- `bun run check`
+- `bun run build` / `bun run build:packages`
+- `bun run test:unit` / `bun test ./tests/engine`
+- `bun run test`, Playwright snapshot updates, or broad `bunx playwright test`
+- `bun run tauri dev`, `bun run tauri build`, or `tauri build`
+
+Default local validation should be narrow and bounded:
+
+- Run the smallest relevant `bun test path/to/file.test.ts` or `bun test path/to/domain/` target for touched code.
+- Run focused checks such as `bun run check:packages`, `bun run check:arch`, or `bun run check:vue` only when the touched area needs them.
+- Use hard timeouts for every Bun/Node/Playwright command. Do not leave background tasks running after a timeout.
+- If a command is backgrounded, times out, or produces an empty long-running task output, stop launching more Node/Bun work, inspect the process list, and report the blocked validation.
+- Before any explicit full validation, first check for stray `node.exe`, `bun.exe`, `chrome-headless-shell.exe`, Vite, and MCP processes. Run one heavy gate at a time and stop immediately if memory pressure grows.
+- When a browser preview is necessary, prefer an existing server. If starting a dev server, record the PID/port and stop it before finishing.
+
+Final status from an AI session must distinguish targeted validation that ran from full gates skipped for local resource safety.
 
 ## Releases & CI
 
@@ -142,7 +163,7 @@ The app editor session (`src/app/editor/session/create.ts`) is a thin Vue wrappe
 
 ### Before committing
 
-Run all quality gates (see [Code quality](#code-quality) for the self-review checklist):
+Human maintainers and CI should run all quality gates (see [Code quality](#code-quality) for the self-review checklist):
 
 ```sh
 bun run check          # oxlint + tsgo type-aware lint & typecheck
@@ -152,6 +173,8 @@ bun run test:tools     # private repo tooling tests
 bun run test:unit      # bun:test
 bun run test           # Playwright E2E
 ```
+
+Local AI agents must follow [Local AI-agent safety](#local-ai-agent-safety) instead of automatically running the full gate set. Report any skipped full gates explicitly.
 
 ## Documentation
 
@@ -291,7 +314,7 @@ Use `scripts/` only for tiny compatibility entrypoint shims that import `../tool
 
 ## Code quality
 
-Before submitting a PR, run the full quality gate and do a self-review:
+Before submitting a PR, human maintainers and CI should run the full quality gate and do a self-review:
 
 ```sh
 bun run check          # oxlint + tsgo type-aware lint & typecheck — zero errors required
@@ -301,6 +324,8 @@ bun run test:tools     # private repo tooling tests
 bun run test:unit      # bun:test
 bun run test           # Playwright E2E
 ```
+
+For local AI sessions, do not run the full quality gate by default. Use targeted tests and focused checks for the touched files, then state which full gates remain unrun because of the Windows resource-exhaustion risk.
 
 Self-review checklist:
 - Run `bun run test:dupes` — if duplication rises, extract shared helpers or use existing types
