@@ -13,9 +13,14 @@ type ImportTarget = {
   switchPage(pageId: string): Promise<void> | void
 }
 
-export async function applyImportedDocument(target: ImportTarget | Editor, imported: SceneGraph) {
+export function prepareImportedDocument(imported: SceneGraph): SceneNode | undefined {
   const firstPage = imported.getPages()[0] as SceneNode | undefined
   if (firstPage) computeAllLayouts(imported, firstPage.id)
+  return firstPage
+}
+
+export async function applyImportedDocument(target: ImportTarget | Editor, imported: SceneGraph) {
+  const firstPage = prepareImportedDocument(imported)
   target.replaceGraph(imported)
   target.undo.clear()
   target.clearSelection()

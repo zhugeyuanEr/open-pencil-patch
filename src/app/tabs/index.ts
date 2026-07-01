@@ -5,7 +5,7 @@ import { readFigFile } from '@open-pencil/core/io/formats/fig'
 import type { SceneGraph } from '@open-pencil/core/scene-graph'
 
 import { setOpenPencilStore } from '@/app/browser-bridge'
-import { applyImportedDocument } from '@/app/document/io/imported-document'
+import { applyImportedDocument, prepareImportedDocument } from '@/app/document/io/imported-document'
 import { setActiveEditorStore } from '@/app/editor/active-store'
 import { ensureGraphFonts } from '@/app/editor/fonts'
 import { createEditorStore } from '@/app/editor/session'
@@ -129,7 +129,7 @@ export async function openFileInNewTab(
           data: new Uint8Array(await file.arrayBuffer())
         })
 
-    await applyImportedDocument(store, imported)
+    prepareImportedDocument(imported)
     // Preload every text font referenced by the imported graph (across all
     // pages) so the first render after open has the CJK/Arabic fallbacks
     // ready and we never show tofu. `ensureGraphFonts` also clears stale
@@ -138,6 +138,7 @@ export async function openFileInNewTab(
       imported,
       imported.getPages().flatMap((p) => p.childIds)
     )
+    await applyImportedDocument(store, imported)
     store.setDocumentSource(file.name, sourceFormat, handle, path)
     store.clearSelection()
     await store.fitCurrentPageToViewport()

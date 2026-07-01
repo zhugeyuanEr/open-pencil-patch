@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { readFigFile } from '@open-pencil/core/io/formats/fig'
 
 import { activeTab } from '@/app/tabs'
-import { useEditorStore } from '@/app/editor/active-store'
 import { toast } from '@/app/shell/ui'
 
-const store = useEditorStore()
 const snapshot = ref<Uint8Array | null>(null)
 const restoring = ref(false)
 const discarding = ref(false)
@@ -21,13 +19,22 @@ async function loadSnapshot() {
   // Guard: the banner must mirror the docKey the recovery module uses.
   // If the active tab's identity changes between read and restore, the
   // snapshot's docKey is stale and we must not apply it.
+  const store = activeTab.value?.store
+  if (!store) {
+    snapshot.value = null
+    return
+  }
   const data = await store.readRecoverySnapshot()
   snapshot.value = data ?? null
 }
 
+onMounted(() => {
+  void loadSnapshot()
+})
+
 watch(activeTabId, () => {
   void loadSnapshot()
-}, { immediate: true })
+})
 
 async function restore() {
   if (!snapshot.value || restoring.value) return
@@ -37,6 +44,8 @@ async function restore() {
   const tabIdAtClick = activeTabId.value
   restoring.value = true
   try {
+    const store = activeTab.value?.store
+    if (!store) return
     const blob = new Blob([snapshot.value])
     const file = new File([blob], 'recovery.fig')
     const imported = await readFigFile(file, { populate: 'first-page' })
@@ -59,6 +68,8 @@ async function discard() {
   const tabIdAtClick = activeTabId.value
   discarding.value = true
   try {
+    const store = activeTab.value?.store
+    if (!store) return
     await store.clearRecoverySnapshot()
     if (activeTabId.value === tabIdAtClick) snapshot.value = null
   } finally {

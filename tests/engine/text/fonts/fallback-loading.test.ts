@@ -37,14 +37,14 @@ describe('bundled fallback font loading', () => {
     const { fetchBundledFontFromUrl } = await import('#core/text/bundled-fetch')
     const originalFetch = globalThis.fetch
     let calls = 0
-    globalThis.fetch = (async () => {
+    globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
       calls += 1
       if (calls < 2) {
         // Simulate transient failures on the first attempt; succeed on the
         // second so the retry helper returns a real buffer.
         throw new Error('network glitch')
       }
-      return originalFetch.apply(globalThis, arguments as unknown as Parameters<typeof fetch>)
+      return originalFetch(...args)
     }) as typeof fetch
 
     try {

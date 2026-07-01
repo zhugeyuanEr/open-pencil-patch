@@ -3,7 +3,7 @@ import { readFigFile } from '@open-pencil/core/io/formats/fig'
 import { computeAllLayouts } from '@open-pencil/core/layout'
 
 import { yieldToUI } from '@/app/document/io/browser'
-import { applyImportedDocument } from '@/app/document/io/imported-document'
+import { applyImportedDocument, prepareImportedDocument } from '@/app/document/io/imported-document'
 import { readReloadSource } from '@/app/document/io/reload-source'
 import { captureReloadState, restoreReloadState } from '@/app/document/io/reload-state'
 import { ensureGraphFonts } from '@/app/editor/fonts'
@@ -48,7 +48,7 @@ export function createOpenActions({
       await yieldToUI()
       const imported = await readFigFile(file, { populate: 'first-page' })
       await yieldToUI()
-      await applyImportedDocument(editor, imported)
+      prepareImportedDocument(imported)
       // Preload every text font referenced by the imported graph so the first
       // post-open render does not fall back to Inter (which has no CJK
       // glyphs and produced tofu on the first frame). Scans every page, not
@@ -61,6 +61,7 @@ export function createOpenActions({
       // (`state.loading` stays on for the duration of the font load) instead
       // of deferring to an idle frame: keeps `openFigFile` a single strictly
       // awaited flow with no races against `reloadFromDisk` or AI tools.
+      await applyImportedDocument(editor, imported)
       state.documentName = file.name.replace(/\.fig$/i, '')
       setDocumentSource(file.name, 'fig', handle, path)
       await fitCurrentPageToViewport()
@@ -103,7 +104,10 @@ export function createReloadActions({
     // otherwise `editor.replaceGraph` schedules a render that sees missing
     // fonts and the page would briefly show blank text rows until the next
     // render trigger fires.
-    await ensureGraphFonts(imported, imported.getPages().flatMap((p) => p.childIds))
+    await ensureGraphFonts(
+      imported,
+      imported.getPages().flatMap((p) => p.childIds)
+    )
     editor.replaceGraph(imported)
 
     editor.undo.clear()
