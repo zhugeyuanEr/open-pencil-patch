@@ -1,6 +1,6 @@
 import type { Editor } from '@open-pencil/core/editor'
 import { computeAllLayouts } from '@open-pencil/core/layout'
-import type { SceneGraph, SceneNode } from '@open-pencil/core/scene-graph'
+import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 
 // Minimal shape needed to import a SceneGraph in place. Both the raw core
 // `Editor` and the app-level `EditorStore` satisfy this — duck-typed so

@@ -2,7 +2,7 @@ import { computed } from 'vue'
 
 import type { Editor } from '@open-pencil/core/editor'
 import type { IORegistry } from '@open-pencil/core/io'
-import type { SceneGraph } from '@open-pencil/core/scene-graph'
+import type { SceneGraph } from '@open-pencil/scene-graph'
 
 import { docKeyForTab } from '@/app/ai/chat/persistence'
 import { createDocumentExportActions } from '@/app/document/export'
@@ -75,6 +75,8 @@ export function createEditorStoreModules(
     ...vectorEdit,
     getFilePath: documentIO.getFilePath,
     openFigFile: documentIO.openFigFile,
+    openDOMFile: documentIO.openDOMFile,
+    importDOMText: documentIO.importDOMText,
     setViewportSize: documentIO.setViewportSize,
     fitCurrentPageToViewport: documentIO.fitCurrentPageToViewport,
     saveFigFile: documentIO.saveFigFile,

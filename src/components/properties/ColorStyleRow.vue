@@ -2,8 +2,8 @@
 import ScrubInput from '@/components/ScrubInput.vue'
 import BoundVariableButton from '@/components/properties/BoundVariableButton.vue'
 import VariablePickerPopover from '@/components/properties/VariablePickerPopover.vue'
+import IconButton from '@/components/ui/IconButton.vue'
 import Tip from '@/components/ui/Tip.vue'
-import { useIconButtonUI } from '@/components/ui/icon-button'
 
 import { vTestId, useI18n } from '@open-pencil/vue'
 
@@ -15,7 +15,7 @@ import {
 import { colorToHexRaw } from '@open-pencil/core/color'
 
 import type { ColorVariableBindingApi } from '@/components/properties/color-style-row'
-import type { Color } from '@open-pencil/core/types'
+import type { Color } from '@open-pencil/scene-graph/primitives'
 
 const {
   item,
@@ -115,10 +115,8 @@ const { panels, dialogs } = useI18n()
       </button>
     </Tip>
 
-    <Tip :label="removeLabel">
-      <button :class="useIconButtonUI({ ui: { base: 'shrink-0' } }).base" @click="emit('remove')">
-        −
-      </button>
-    </Tip>
+    <IconButton :label="removeLabel" class="shrink-0" @click="emit('remove')">
+      <icon-lucide-minus class="size-3.5" />
+    </IconButton>
   </div>
 </template>

@@ -1,11 +1,11 @@
 /* eslint-disable max-lines -- scene dispatch stays together while shape domains live in sibling modules */
 import type { Canvas, Path } from 'canvaskit-wasm'
 
+import type { SceneNode, SceneGraph, Fill } from '@open-pencil/scene-graph'
+import { computeDescendantVisualBounds } from '@open-pencil/scene-graph/geometry'
+import type { Color } from '@open-pencil/scene-graph/primitives'
+
 import { DROP_HIGHLIGHT_ALPHA, DROP_HIGHLIGHT_STROKE, SECTION_CORNER_RADIUS } from '#core/constants'
-import { computeDescendantVisualBounds } from '#core/geometry'
-import type { SceneNode, SceneGraph, Fill } from '#core/scene-graph'
-import { fontManager } from '#core/text/fonts'
-import type { Color } from '#core/types'
 import { vectorNetworkToCenterlinePath } from '#core/vector'
 
 import { figmaBlendModeToSkia, needsIsolatedBlendLayer } from './blend'
@@ -21,6 +21,7 @@ import {
   getStrokeJoinEntity
 } from './strokes'
 import { drawFigmaDerivedText } from './text-derived'
+import { fontManager } from '#core/text/fonts'
 import { textNodeToOutlinePath } from './text-outlines'
 
 function drawVisibleFills(
@@ -637,9 +638,9 @@ function drawGradientText(
   }
 }
 
-const CJK_TEXT_RE = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/u
+const CJK_TEXT_RE = /[぀-ヿ㐀-鿿豈-﫿가-힯]/u
 
-const ARABIC_TEXT_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/u
+const ARABIC_TEXT_RE = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/u
 
 function textNeedsScriptFallback(text: string): boolean {
   return CJK_TEXT_RE.test(text) || ARABIC_TEXT_RE.test(text)
@@ -685,13 +686,12 @@ export function renderText(r: SkiaRenderer, canvas: Canvas, node: SceneNode, fil
     return
   }
 
+  // Fonts are not yet ready (or the required script fallback never loaded).
+  // Skip drawing text entirely instead of falling back to `r.textFont` (Inter),
+  // which has no CJK/Arabic glyphs and would render as tofu. The renderer
+  // repaints once fonts finish loading via the `fontsLoaded` signal.
   if (!r.fontsLoaded || !r.fontProvider || !r.isNodeFontLoaded(node)) {
-    // Fonts are not yet ready (or the required script fallback never loaded).
-    // Skip drawing text entirely instead of falling back to `r.textFont` (Inter),
-    // which has no CJK/Arabic glyphs and would render as tofu. When the load
-    // is known to have failed, draw a soft placeholder so the user is not
-    // misled into thinking the text is just empty.
-    if (r.fontsLoadFailed && textNeedsScriptFallback(text)) {
+    if (textNeedsScriptFallback(text)) {
       drawFallbackPlaceholder(r, canvas, node)
     }
     canvas.restore()
@@ -705,9 +705,11 @@ export function renderText(r: SkiaRenderer, canvas: Canvas, node: SceneNode, fil
     canvas.restore()
     return
   }
-  const paragraph = r.buildParagraph(node, r.fillPaint.getColor())
-  canvas.drawParagraph(paragraph, 0, paragraphY)
-  paragraph.delete()
+  if (r.fontsLoaded && r.fontProvider) {
+    const paragraph = r.buildParagraph(node, r.fillPaint.getColor())
+    canvas.drawParagraph(paragraph, 0, paragraphY)
+    paragraph.delete()
+  }
 
   canvas.restore()
 }
