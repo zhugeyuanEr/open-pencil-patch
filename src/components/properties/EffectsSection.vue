@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppSelect from '@/components/ui/AppSelect.vue'
 import ColorInput from '@/components/ColorPicker/ColorInput.vue'
-import ScrubInput from '@/components/ScrubInput.vue'
+import ScrubInput from '@/components/inputs/ScrubInput.vue'
 import IconButton from '@/components/ui/IconButton.vue'
 import PanelSection from '@/components/ui/PanelSection.vue'
 import Tip from '@/components/ui/Tip.vue'
@@ -21,7 +21,7 @@ const { panels } = useI18n()
     prop-key="effects"
     :label="panels.effects"
   >
-    <PanelSection :label="panels.effects" test-id="effects-section">
+    <PanelSection :label="panels.effects" data-test-id="effects-section">
       <template #actions>
         <IconButton
           :label="panels.addEffect"

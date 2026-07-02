@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ScrubInput from '@/components/ScrubInput.vue'
+import ScrubInput from '@/components/inputs/ScrubInput.vue'
 import IconButton from '@/components/ui/IconButton.vue'
 import PanelRow from '@/components/ui/PanelRow.vue'
 import PanelSection from '@/components/ui/PanelSection.vue'
@@ -28,7 +28,7 @@ function handleAlign(
   <PositionControlsRoot
     v-slot="{ active, isMulti, xValue, yValue, wValue, hValue, rotationValue, actions }"
   >
-    <PanelSection v-if="active" :label="panels.position" test-id="position-section">
+    <PanelSection v-if="active" :label="panels.position" data-test-id="position-section">
       <PanelRow class="mb-1.5 gap-2">
         <PanelRow gap="sm">
           <IconButton

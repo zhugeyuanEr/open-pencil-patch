@@ -2,7 +2,7 @@
 import { PropertyListRoot, useFillControls, useOkHCL, useI18n, inputValue } from '@open-pencil/vue'
 import { colorToHexRaw, parseColor } from '@open-pencil/core/color'
 
-import FillPicker from '@/components/FillPicker.vue'
+import FillPicker from '@/components/fill-picker/FillPicker.vue'
 import IconButton from '@/components/ui/IconButton.vue'
 import PanelSection from '@/components/ui/PanelSection.vue'
 import ColorStyleRow from '@/components/properties/ColorStyleRow.vue'
@@ -51,7 +51,7 @@ function updateFillHex(
     prop-key="fills"
     :label="panels.fill"
   >
-    <PanelSection :label="panels.fill" test-id="fill-section">
+    <PanelSection :label="panels.fill" data-test-id="fill-section">
       <template #actions>
         <IconButton
           :label="panels.addFill"
@@ -70,9 +70,6 @@ function updateFillHex(
         :active-node-id="activeNode?.id ?? null"
         :binding-api="fillCtx"
         :variable-color="fill.type === 'SOLID' ? fill.color : undefined"
-        :visibility-test-id="`fill-visibility-${i}`"
-        :apply-variable-test-id="`fill-apply-variable-${i}`"
-        unbind-test-id="fill-unbind-variable"
         data-test-id="fill-item"
         :data-test-index="i"
         :remove-label="panels.removeFill"

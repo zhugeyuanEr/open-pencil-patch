@@ -11,6 +11,7 @@ import { nextTick, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 
 import type { ChatSessionsStore } from '@/app/ai/chat/sessions'
+import Tip from '@/components/ui/Tip.vue'
 
 const { store, disabled = false } = defineProps<{
   store: ChatSessionsStore
@@ -129,25 +130,27 @@ function handleDelete(id: string) {
             >
               {{ session.name }}
             </button>
-            <button
-              type="button"
-              data-test-id="chat-session-rename"
-              class="shrink-0 cursor-pointer rounded p-1 text-muted transition-colors hover:bg-accent/20 hover:text-surface"
-              :title="`Rename ${session.name}`"
-              @click.stop="startRename(session.id, session.name)"
-            >
-              <icon-lucide-pencil class="size-3" />
-            </button>
-            <button
-              type="button"
-              data-test-id="chat-session-delete"
-              class="shrink-0 cursor-pointer rounded p-1 text-muted transition-colors hover:bg-accent/20 hover:text-surface data-[disabled]:cursor-not-allowed data-[disabled]:opacity-30"
-              :disabled="store.getAllSessions().length <= 1"
-              :title="`Delete ${session.name}`"
-              @click.stop="handleDelete(session.id)"
-            >
-              <icon-lucide-trash-2 class="size-3" />
-            </button>
+            <Tip :label="`Rename ${session.name}`">
+              <button
+                type="button"
+                data-test-id="chat-session-rename"
+                class="shrink-0 cursor-pointer rounded p-1 text-muted transition-colors hover:bg-accent/20 hover:text-surface"
+                @click.stop="startRename(session.id, session.name)"
+              >
+                <icon-lucide-pencil class="size-3" />
+              </button>
+            </Tip>
+            <Tip :label="`Delete ${session.name}`">
+              <button
+                type="button"
+                data-test-id="chat-session-delete"
+                class="shrink-0 cursor-pointer rounded p-1 text-muted transition-colors hover:bg-accent/20 hover:text-surface data-[disabled]:cursor-not-allowed data-[disabled]:opacity-30"
+                :disabled="store.getAllSessions().length <= 1"
+                @click.stop="handleDelete(session.id)"
+              >
+                <icon-lucide-trash-2 class="size-3" />
+              </button>
+            </Tip>
           </template>
         </div>
 

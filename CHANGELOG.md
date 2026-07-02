@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Add Figma-style page management in the Pages panel with a context menu for
+  renaming/deleting pages and drag-and-drop page reordering.
+
 ### Fixes
 
 - Fix Figma clipboard fidelity: auto-layout frames with equal padding on
@@ -26,6 +31,10 @@
   always fires so the canvas is re-painted even when the fallback never
   loaded (in which case a soft placeholder rectangle is shown instead of
   tofu).
+- Match Figma auto-layout reflow when deleting children or hiding optional
+  instance slots, including HUG-height component instances.
+- Fix desktop clipboard copy/cut/paste by using Tauri's system clipboard
+  bridge when browser clipboard events are unavailable.
 
 ## 0.13.3 — 2026-06-15
 
